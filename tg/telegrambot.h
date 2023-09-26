@@ -23,7 +23,6 @@ namespace tg{
     public:
         explicit TelegramBot();
         void send_message(const QString &massege);
-        void send_document(const QString &path);
 
     public slots:
         virtual void replyFinished(QNetworkReply* reply);

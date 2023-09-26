@@ -6,14 +6,15 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QFile>
+#include <iostream>
 
 class Requests : public QObject
 {
     Q_OBJECT
 public:
     explicit Requests(QObject *parent = nullptr);
-    void get(const QUrl &url);
-    void post(const QUrl &url, QByteArray *data);
+    virtual void get(const QUrl &url);
+    virtual void post(const QUrl &url, const QString &data);
     void connect_manager(Requests *requests);
 private slots:
     virtual void replyFinished(QNetworkReply* reply);

@@ -12,7 +12,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-include_directories(core klines areas areas/core orders tg manager)
+include_directories(core klines areas areas/core orders tg manager
+    orderControl orderControl/client orderControl/account)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network Test)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Network Test)
@@ -37,6 +38,11 @@ add_executable(Irken
   tg/telegrambot.h tg/telegrambot.cpp
   manager/manager.h manager/manager.cpp
   manager/managerEnums.h
+  orderControl/binancebot.h orderControl/binancebot.cpp
+  orderControl/client/binanceapiclient.h orderControl/client/binanceapiclient.cpp
+  orderControl/client/source.h
+  orderControl/client/key.h
+  orderControl/account/binanceaccount.h orderControl/account/binanceaccount.cpp
 )
 target_link_libraries(Irken
     Qt${QT_VERSION_MAJOR}::Core

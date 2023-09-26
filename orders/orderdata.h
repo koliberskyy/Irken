@@ -22,6 +22,7 @@ struct OrderData
     qint64 time;
     double actuality; // характеризует близость точки входа к текущей цене актива
     double last_price;
+    Area area;
     void set_thrand(Thrand thr){
         thrand = thr;
     }
@@ -51,8 +52,15 @@ struct OrderData
             take_profit_0_75_pc = point_of_entry / 1.0075;
         }
     }
-
-    Area area;
+    QString id() {
+        return QString(pair + QString::fromStdString(std::to_string(time)));
+    }
+    QString id() const{
+        return QString(pair + QString::fromStdString(std::to_string(time)));
+    }
+    void update_actuality(double act){
+        actuality = act;
+    }
     OrderData():
         point_of_entry{0.0}, stop_loss{0.0}, take_profit{0.0}, stop_percent{0.0}, long_order{true}, shoulder{0.0},
         time{0}, actuality{0.0}, area{Area::null}{}

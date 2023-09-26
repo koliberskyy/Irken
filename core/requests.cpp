@@ -11,9 +11,9 @@ void Requests::get(const QUrl &url)
     manager.get(QNetworkRequest(url));
 }
 
-void Requests::post(const QUrl &url, QByteArray *data)
+void Requests::post(const QUrl &url, const QString &data)
 {
-    manager.post(QNetworkRequest(url), *data);
+    manager.post(QNetworkRequest(url), data.toUtf8());
 }
 
 void Requests::connect_manager(Requests *requests)
@@ -25,5 +25,9 @@ void Requests::connect_manager(Requests *requests)
 
 void Requests::replyFinished(QNetworkReply *reply)
 {
+    QString answer = QString::fromUtf8(reply->readAll());
+
+    std::cout << answer.toStdString() << '\n';
+
     reply->deleteLater();
 }

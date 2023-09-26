@@ -37,7 +37,7 @@ void Klines::create(QJsonArray &&arr)
 
     klines.reserve(arr.size());
 
-    for(auto i = 0, i_prev = 0; i < arr.size() - 1; i++){
+    for(auto i = 0, i_prev = 0; i < arr.size(); i++){
         klines.emplace_back(CandleStick(arr[i][0].toInteger(),
                                         arr[i][1].toString().toDouble(),
                                         arr[i][2].toString().toDouble(),

@@ -8,7 +8,7 @@ Imbalance::Imbalance(const std::vector<CandleStick> *__klines)
 
 void Imbalance::init()
 {
-    for(int i = 2; i < klines->size(); i++){
+    for(int i = 2; i < klines->size() - 1; i++){
         imbalance_check(klines->at(i-2), klines->at(i-1), klines->at(i));
     }
 }

@@ -14,7 +14,7 @@ void BuyToSell::init()
     int green_counter{0};
     bool probitije{false};
 
-    for(auto i = 0; i < klines->size(); i++){
+    for(auto i = 0; i < klines->size() - 1; i++){
         if(klines->at(i).color == KlineColor::green){
             if(red_counter > 0){
                 last_green = nullptr;

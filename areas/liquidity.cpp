@@ -10,7 +10,7 @@ void Liquidity::init()
         std::cout << "void Liquidity::init-ERROR-candles.size()=" << klines->size() <<"\n";
     }
 
-    for(auto i = 1; i < klines->size(); i++){
+    for(auto i = 1; i < klines->size() - 1; i++){
         collect_liquidity(i);
 
         if(klines->at(i).hight > klines->at(i-1).hight){
@@ -216,7 +216,7 @@ void Liquidity::collect_liquidity(int pos)
         if(hight_liquid != klines->at(pos-1).hight){
             if(hight_liquid > 0){
                 swickSk->swick_check(klines->at(pos), hight_liquid);
-                if(pos+1 < klines->size())
+                if(pos+1 < klines->size() - 1)
                     swickSk->sk_check(klines->at(pos), klines->at(pos+1), hight_liquid);
             }
         }
@@ -224,7 +224,7 @@ void Liquidity::collect_liquidity(int pos)
         if(low_liquid != klines->at(pos-1).low){
             if(low_liquid > 0){
                 swickSk->swick_check(klines->at(pos), low_liquid);
-                if(pos+1 < klines->size())
+                if(pos+1 < klines->size() - 1)
                     swickSk->sk_check(klines->at(pos), klines->at(pos+1), low_liquid);
             }
         }
