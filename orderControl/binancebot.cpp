@@ -5,7 +5,10 @@ namespace binance {
     orders{nullptr}
     {
         for(int i = 0; i < key::API_SIZE; i++){
-            accounts.emplace_back(key::API[i], key::SECRET[i]);
+            if(i == 0)
+                accounts.emplace_back(key::API[i], key::SECRET[i], key::ACC_NAME[i], &logger);
+            else
+                accounts.emplace_back(key::API[i], key::SECRET[i], key::ACC_NAME[i]);
         }
     }
 
@@ -32,9 +35,13 @@ namespace binance {
     void BinanceBot::post_order(const OrderData &order)
     {
         std::cout << "void BinanceBot::post_order(const OrderData &order)";
-
+        reply_buf.clear();
         for(auto it = accounts.begin(); it != accounts.end(); it++){
-            it->new_order(order);
+            QString reply_tmp(it->new_order(order));
+            if(!reply_tmp.isEmpty())
+            {
+               reply_buf.append(reply_tmp);
+            }
         }
     }
 
@@ -43,6 +50,37 @@ namespace binance {
         for(auto it = accounts.begin(); it != accounts.end(); it++){
             it->cancel_order(order);
         }
+    }
+
+    void BinanceBot::cancel_all_open_orders()
+    {
+        for(auto it = accounts.begin(); it != accounts.end(); it++){
+            std::cout << it->delete_all_open_orders()->toStdString();
+        }
+    }
+
+    QString BinanceBot::test_conectivity()
+    {
+        QString reply;
+        for(auto it = accounts.begin(); it != accounts.end(); it++){
+            reply.append(it->test_conectivity());
+        }
+        reply.append("актуальный ip:");
+        reply.append(accounts.begin()->ip());
+        return std::move(reply);
+    }
+
+    void BinanceBot::close_all_positions()
+    {
+        for(auto it = accounts.begin(); it != accounts.end(); it++){
+            it->close_all_positions();
+        }
+    }
+
+    QString BinanceBot::get_logs()
+    {
+        logger.update_daily_positions_log();
+        return std::move(logger.get_positions_log());
     }
 
     void BinanceBot::update_orders(OrderBook *__orders)
@@ -84,5 +122,10 @@ namespace binance {
            positions_count = it->update_control();
         }
         return positions_count;
+    }
+
+    bool BinanceBot::ping()
+    {
+        return accounts.begin()->ping();
     }
 }//namespace binance****************************

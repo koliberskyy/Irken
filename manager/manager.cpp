@@ -16,17 +16,15 @@ bool Manager::update()
             thr_vec.at(i).join();
     }
 
-    auto flag = false;
-    for(int i = 0; i < manager::pairs.size(); i++){
-        if(orders[i].size() > 0 ){
-            flag = true;
-            break;
-        }
-
-    }
-    if(!flag)
+    //проверка отсутствия интернета
+    if(!binance_bot.ping())
         return false;
+
     binance_bot.update_orders(&orders);
+    if(!binance_bot.get_reply()->isEmpty()){
+        tg.send_message(*binance_bot.get_reply());
+        tg.send_message(QString("Актуальный ip: ") + binance_bot.ip());
+    }
     return true;
 }
 
@@ -64,11 +62,11 @@ void Manager::filter(const std::pair<int, QString> &pair)
     //фильтры
     for(auto it = orders[pair.first].begin(); it != orders[pair.first].end();){
         //фильтр по времени возникновения зоны
-        if(it->time > (std::chrono::system_clock::now().time_since_epoch().count()/1000000) - 1000/*ms*/ * 60 /*s*/ * 60 /*m*/ * 24/*h*/ * 1/*d*/
+        if(it->time > (std::chrono::system_clock::now().time_since_epoch().count()/1000000) - 1000/*ms*/ * 60 /*s*/ * 60 /*m*/ * 12/*h*/ * 1/*d*/
                 //фильтр по актуальности
                 || it->actuality < 0.0 || it->actuality > 0.5
                 //фильтр для мелочной ликвиности
-                || (it->area == Area::liquid && it->shoulder > 150)
+                || (it->area == Area::liquid && it->shoulder > 196)
                 )
         {
             it = orders[pair.first].erase(it);
@@ -104,11 +102,12 @@ void Manager::send_result()
             ss.str("");
         }
     }
-
-
 }
 
-int Manager::update_control()
+
+
+void Manager::update_control()
 {
-   return binance_bot.update_control();
+    auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::cout <<std::ctime(&time)<< "--->positions: " << binance_bot.update_control() <<", ";
 }

@@ -137,7 +137,7 @@ OrderData Orders::create_order(const AreaPair &area)
         }
         case Area::imbalance_up:
         {
-            auto poe = area.low;
+            auto poe = area.hight;
             auto sl = nearest_below(area.low);
             auto tp = rr_take_profit_above(poe, sl, area.hight);
 
@@ -151,7 +151,7 @@ OrderData Orders::create_order(const AreaPair &area)
                                              timeframe
                                              );
 
-            poe = area.hight;
+            poe = area.low;
             return OrderData(Area::imbalance_up,
                                              poe,
                                              sl,
@@ -165,7 +165,7 @@ OrderData Orders::create_order(const AreaPair &area)
         }
         case Area::imbalance_low:
         {
-            auto poe = area.hight;
+            auto poe = area.low;
             auto sl = nearest_above(area.hight);
             auto tp = rr_take_profit_below(poe, sl, area.low);
 
@@ -179,7 +179,7 @@ OrderData Orders::create_order(const AreaPair &area)
                                              timeframe
                                              );
 
-            poe = area.low;
+            poe = area.hight;
             return OrderData(Area::imbalance_low,
                                              poe,
                                              sl,

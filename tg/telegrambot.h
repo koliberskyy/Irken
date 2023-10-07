@@ -30,8 +30,8 @@ namespace tg{
         void reply_complete();
     private:
         QString token = "6094722667:AAEVC02dxf9HGWq9xivjJRPl8ZwIBklpvEQ";
-        QString chat_id = "-1001798375923";
-        //QString chat_id = "615961766";
+        //QString chat_id = "-1001798375923";
+        QString chat_id = "615961766";
     };
 
     inline QString convertTime(qint64 time){

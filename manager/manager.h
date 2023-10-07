@@ -19,7 +19,7 @@ public:
     void filter(const std::pair<int, QString> &pair);
     void print_result_file();
     void send_result();
-    int update_control();
+    void update_control();
 signals:
 private:
     std::array<std::list<OrderData>, manager::pairs.size()> orders;
@@ -29,6 +29,18 @@ private:
 public:
     auto telegram(){
         return &tg;
+    }
+    void cancel_all_open_orders(){
+        binance_bot.cancel_all_open_orders();
+    }
+    void test_conectivity(){
+        tg.send_message(binance_bot.test_conectivity());
+    }
+    void close_all_positions(){
+        binance_bot.close_all_positions();
+    }
+    void send_logs(){
+        tg.send_message(binance_bot.get_logs());
     }
 
 

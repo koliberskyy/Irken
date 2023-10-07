@@ -52,16 +52,17 @@ stopPrice			DECIMAL		NO		Used with STOP orders
 positionSide        ENUM        NO      надо разобраться что за ерунда
 
 */
-    QByteArray *BinanceAPIClient::post_order(	const QString &symbol,
+    QByteArray *BinanceAPIClient::post_order(const QString &symbol,
                                         const QString &side,
                                         const QString &type,
                                         const QString &timeInForce,
                                         const QString &quantity,
                                         const QString &price,
-                                        const QString &newClientOrderId = "",
-                                        const QString &stopPrice = "",
-                                        const QString &positionSide = ""
-                                        )
+                                        const QString &newClientOrderId,
+                                        const QString &stopPrice,
+                                        const QString &positionSide,
+                                        bool close_position,
+                                        const QString &callbackRate)
     {
         const QString url = binance::FAPI_HOST + "/fapi/v1/order?";
         QString data;
@@ -100,6 +101,13 @@ positionSide        ENUM        NO      надо разобраться что �
         if(!positionSide.isEmpty()){
             data.append("&positionSide=");
             data.append(positionSide);
+        }
+        if(close_position){
+            data.append("&closePosition=true");
+        }
+        if(!callbackRate.isEmpty()){
+            data.append("&callbackRate=");
+            data.append(callbackRate);
         }
 
         data.append(timestamp());
@@ -199,6 +207,28 @@ positionSide        ENUM        NO      надо разобраться что �
         return read_buffer();
     }
 
+    QByteArray *BinanceAPIClient::delete_all_open_orders()
+    {
+        for(int i = 0; i < manager::pairs.size(); i++){
+
+            QString url = binance::FAPI_HOST + "/fapi/v1/allOpenOrders?";
+            QString data;
+            QString symbol = manager::pairs.at(i).second;
+
+            data.append("&symbol=");
+            data.append(symbol);
+
+            data.append(timestamp());
+            data.append(signature_sha256(data, secret_key));
+
+            url.append(data);
+            delete_request(url);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            auto hui = *read_buffer();
+        }
+        return read_buffer();
+    }
+
     QString BinanceAPIClient::normalize_digit(QString digit)
     {
        QString result;
@@ -236,6 +266,18 @@ positionSide        ENUM        NO      надо разобраться что �
         return result;
     }
 
+    bool BinanceAPIClient::ping()
+    {
+        QString url = binance::FAPI_HOST + "/fapi/v1/ping?";
+
+        get(url);
+
+        if(read_buffer()->size() == 2)
+            return true;
+        else
+            return false;
+    }
+
 
 //*********************************METHODS_END***********************************
     void BinanceAPIClient::get(const QUrl &url)
@@ -243,7 +285,7 @@ positionSide        ENUM        NO      надо разобраться что �
         QNetworkRequest req(url);
         req.setRawHeader(QByteArray("X-MBX-APIKEY"), api_key.toUtf8());
         manager.get(req);
-        spy->wait();
+        spy->wait(50000);
     }
 
     void BinanceAPIClient::post(const QUrl &url, const QString &data)
@@ -251,7 +293,7 @@ positionSide        ENUM        NO      надо разобраться что �
         QNetworkRequest req(url);
         req.setRawHeader(QByteArray("X-MBX-APIKEY"), api_key.toUtf8());
         manager.post(req, data.toUtf8());
-        spy->wait();
+        spy->wait(50000);
     }
 
     void BinanceAPIClient::delete_request(const QString &url)
@@ -259,7 +301,7 @@ positionSide        ENUM        NO      надо разобраться что �
         QNetworkRequest req(url);
         req.setRawHeader(QByteArray("X-MBX-APIKEY"), api_key.toUtf8());
         manager.deleteResource(req);
-        spy->wait();
+        spy->wait(50000);
     }
 
     void BinanceAPIClient::replyFinished(QNetworkReply *reply)

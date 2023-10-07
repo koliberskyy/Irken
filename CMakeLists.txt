@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 include_directories(core klines areas areas/core orders tg manager
-    orderControl orderControl/client orderControl/account)
+    orderControl orderControl/client orderControl/account orderControl/logger)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network Test)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Network Test)
@@ -43,6 +43,9 @@ add_executable(Irken
   orderControl/client/source.h
   orderControl/client/key.h
   orderControl/account/binanceaccount.h orderControl/account/binanceaccount.cpp
+  orderControl/logger/logger.h orderControl/logger/logger.cpp
+  orderControl/account/positionsbuffer.h orderControl/account/positionsbuffer.cpp
+  settings.h
 )
 target_link_libraries(Irken
     Qt${QT_VERSION_MAJOR}::Core

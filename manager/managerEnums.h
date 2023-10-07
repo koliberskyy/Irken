@@ -42,7 +42,7 @@ namespace manager{
     std::pair{3, "ETHUSDT"},
     std::pair{3, "LTCUSDT"},
     std::pair{2, "LINKUSDT"},
-    std::pair{7, "TRXUSDT"},
+    std::pair{0, "TRXUSDT"},
     std::pair{0, "XLMUSDT"},
     std::pair{0, "ADAUSDT"},
     std::pair{3, "XMRUSDT"},
@@ -63,17 +63,75 @@ namespace manager{
     std::pair{0, "SOLUSDT"},
     std::pair{2, "NEOUSDT"}
 };
-    const std::array<QString, 1> timefraemes{
-        //"1h",
+    const std::array<std::pair<int, QString>, 27> price{
+    std::pair{2, "BTCUSDT"},
+    std::pair{2, "BNBUSDT"},
+    std::pair{4, "XRPUSDT"},
+    std::pair{3, "EOSUSDT"},
+    std::pair{2, "ETHUSDT"},
+    std::pair{2, "LTCUSDT"},
+    std::pair{3, "LINKUSDT"},
+    std::pair{5, "TRXUSDT"},
+    std::pair{5, "XLMUSDT"},
+    std::pair{4, "ADAUSDT"},
+    std::pair{2, "XMRUSDT"},
+    std::pair{2, "DASHUSDT"},
+    std::pair{2, "ZECUSDT"},
+    std::pair{3, "XTZUSDT"},
+    std::pair{3, "ATOMUSDT"},
+    std::pair{3, "ETCUSDT"},
+    std::pair{2, "BCHUSDT"},
+    std::pair{4, "SXPUSDT"},
+    std::pair{4, "IOTAUSDT"},
+    std::pair{4, "MATICUSDT"},
+    std::pair{3, "FILUSDT"},
+    std::pair{3, "NEARUSDT"},
+    std::pair{2, "EGLDUSDT"},
+    std::pair{4, "THETAUSDT"},
+    std::pair{3, "DOTUSDT"},
+    std::pair{3, "SOLUSDT"},
+    std::pair{3, "NEOUSDT"}
+};
+    const std::array<QString, 2> timefraemes{
+        "1h",
         "4h"
         //"6h"
     };
-    inline QString filter(QString value, const QString &symbol){
+    inline QString filter_minQty(QString value, const QString &symbol){
 
         int filter_count = 0;
         for(int i = 0; i < pairs.size(); i++){
             if(minQty[i].second == symbol)
                 filter_count = minQty[i].first;
+        }
+
+        QString result;
+        int i = 0;
+        do{
+            result.append(value.at(i));
+            i++;
+        }while(value.at(i) != '.');
+        result.append(value.at(i));
+
+        int null_counter{0};
+        for(int j = i+1; j < value.size(); j++ ){
+            if(null_counter < filter_count){
+                result.append(value.at(j));
+                null_counter++;
+            }
+            else{
+                result.append('0');
+            }
+        }
+
+        return result;
+    }
+    inline QString filter_price(QString value, const QString &symbol){
+
+        int filter_count = 0;
+        for(int i = 0; i < pairs.size(); i++){
+            if(price[i].second == symbol)
+                filter_count = price[i].first;
         }
 
         QString result;

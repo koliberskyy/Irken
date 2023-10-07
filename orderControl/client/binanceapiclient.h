@@ -5,8 +5,13 @@
 #include <QMessageAuthenticationCode>
 #include <QSignalSpy>
 #include <memory>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include "key.h"
+#include "managerEnums.h"
 #include "source.h"
+#include "thread"
 namespace binance{
 
     class BinanceAPIClient : public Requests
@@ -26,13 +31,17 @@ namespace binance{
                         const QString &price,
                         const QString &newClientOrderId,
                         const QString &stopPrice,
-                        const QString &positionSide);
+                        const QString &positionSide,
+                        bool close_position = false,
+                        const QString &callbackRate = "");
         QByteArray* balances();
         QByteArray* positionRisk();
         QByteArray* positionRisk(const QString &symbol);
         QByteArray* delete_order(const QString &symbol, const QString &origClientOrderId);
+        QByteArray* delete_all_open_orders();
         QString normalize_digit(QString digit);
         QString normalize_qty(QString qty, const QString &symbol);
+        bool ping();
     public slots:
         virtual void replyFinished(QNetworkReply* reply) override;
     signals:
