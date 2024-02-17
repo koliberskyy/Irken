@@ -7,6 +7,7 @@
 #include <QDateTimeEdit>
 #include <QStatusBar>
 #include <QTimer>
+#include <QProgressBar>
 
 #include <memory>
 
@@ -36,6 +37,7 @@ private:
 
     QDateTimeEdit *dateTimeEdit;
     QTimer *timer;
+    QProgressBar *smmUpdateprogressBar;
 
     std::unique_ptr<QDateTime> posUpdateTime;
     std::unique_ptr<QDateTime> ordUpdateTime;

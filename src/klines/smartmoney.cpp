@@ -7,16 +7,56 @@ SmartMoney::SmartMoney(QObject *parent)
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 }
 
-void SmartMoney::updateSmartMoney()
+void SmartMoney::updateSmartMoney(int klinesPackageSize)
 {
-    for(auto symbol : symbol::utf8){
-            QByteArray query("category=linear&symbol=" + symbol + "&interval=" + "W" + "&limit=320");
-            QUrl url("https://api.bybit.com/v5/market/mark-price-kline?" + std::move(query));
-            url.setUserInfo("W");
-            QNetworkRequest req(url);
+    //копируем по значению так как после thr.detach() klinesPackageSize перестанет сущетсвовать
+    std::thread thr([this, packageSize = klinesPackageSize](){
+        isUpdateFinished = false;
+        emit updateProgressChanged(1);
+        orderMap.clear();
+        std::map<QString, QJsonArray> oneWeekTf;
 
-            manager->get(req);
-    }
+        auto download = [&packageSize, this](std::map<QString, QJsonArray> *mapPtr, const QString &interval, const QString &limit){
+            auto begin = symbol::utf8.begin();
+            auto it = symbol::utf8.begin();
+            auto end = symbol::utf8.end();
+            auto counter{0};
+
+            while(it != end){
+                counter++;
+                it++;
+                if(counter == packageSize || it == end){
+                    counter = 0;
+                    mapPtr->merge(downloadKlinesPackage(interval, limit, begin, it));
+                    begin = it;
+                }
+            }
+        };
+
+        download(&oneWeekTf, "W", "320");
+        emit updateProgressChanged(99-oneWeekTf.size());
+        auto currentProgress = 99-oneWeekTf.size();
+        std::vector<std::thread> thr_vec;
+        auto lambda = [&oneWeekTf, this, &currentProgress](std::map<QString, QJsonArray>::const_iterator it){
+            if(it != oneWeekTf.cend()){
+                updateLiquids(it->second, it->first);
+            }
+            currentProgress++;
+            emit updateProgressChanged(currentProgress);
+        };
+        for(auto it = oneWeekTf.cbegin(); it != oneWeekTf.cend(); it++){
+            thr_vec.emplace_back(lambda, it);
+        }
+        for(auto &it : thr_vec){
+            if(it.joinable()){
+                it.join();
+            }
+        }
+        emit updateProgressChanged(100);
+        isUpdateFinished = true;
+        emit(updated(QJsonArray()));
+    });
+    thr.detach();
 }
 
 void SmartMoney::replyFinished(QNetworkReply *reply)
@@ -46,8 +86,6 @@ void SmartMoney::updateAreas(TradingWindow window, double currentPrice)
 {
     auto symbol = window.symbol;
 
-    auto toByteArray = [](qint64 count){return QByteArray(std::to_string(count).c_str());};
-
     auto lowStart = window.lowWindowBegin.toMSecsSinceEpoch();
     auto lowEnd = window.lowWindowEnd.toMSecsSinceEpoch();
 
@@ -60,75 +98,27 @@ void SmartMoney::updateAreas(TradingWindow window, double currentPrice)
 
     if(highStart > 0 && highEnd > 0 && window.isHighZoneAvaible) //закоментировано условие вхождения текущей цены в зону
         for(auto interval: symbol::intervals){
-            QEventLoop loop;
-            QTimer timer;
-            QNetworkAccessManager mgr;
-            QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
-            connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-            QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval + "&limit=1000" + "&start=" + toByteArray(highStart) + "&end=" + toByteArray(highEnd));
-            QUrl url("https://api.bybit.com/v5/market/mark-price-kline?" + std::move(query));
-            url.setUserInfo("h" + interval);
-            QNetworkRequest req(url);
-            mgr.get(req);
-
-            timer.start(10000);
-            QNetworkReply *reply = mgr.get(req);
-            loop.exec();
-
-            auto byteArray = reply->readAll();
-
-            if(!byteArray.isEmpty()){
-                auto obj = QJsonDocument::fromJson(byteArray);
-                auto result = obj["result"].toObject();
-                auto orders = updateOrders(result["list"].toArray(), result["symbol"].toString(), forHighTakeProfit, "Sell", currentPrice);
-                if(!orders.empty()){
-                    //выдаем дальше
-                    orderMap[symbol] = std::move(orders);
-                    break;
-                }
+            auto klines = QJsonArray();
+            while (klines.empty()){
+                klines = downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.highWindowBegin), instruments::timeToByteArray(window.highWindowEnd));
             }
-            else{
-                break;
-            }
-            reply->deleteLater();
+            auto orders = updateOrders(klines, symbol, forHighTakeProfit, "Sell", currentPrice);
+
+            if(!orders.empty())
+                orderMap[symbol] = std::move(orders);
+
         }
 
         if(lowStart > 0 && lowEnd > 0 && !window.isHighZoneAvaible) //закоментировано условие вхождения текущей цены в зону
             for(auto interval: symbol::intervals){
-                QEventLoop loop;
-                QTimer timer;
-                QNetworkAccessManager mgr;
-                QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
-                connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-                QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval + "&limit=1000" + "&start=" + toByteArray(lowStart) + "&end=" + toByteArray(lowEnd));
-                QUrl url("https://api.bybit.com/v5/market/mark-price-kline?" + std::move(query));
-                url.setUserInfo("h" + interval);
-                QNetworkRequest req(url);
-                mgr.get(req);
-
-                timer.start(10000);
-                QNetworkReply *reply = mgr.get(req);
-                loop.exec();
-
-                auto byteArray = reply->readAll();
-
-                if(!byteArray.isEmpty()){
-                    auto obj = QJsonDocument::fromJson(byteArray);
-                    auto result = obj["result"].toObject();
-
-                    auto orders = updateOrders(result["list"].toArray(), result["symbol"].toString(), forLowTakeProfit, "Buy", currentPrice);
-                    if(!orders.isEmpty()){
-                        //выдаем дальше
-                        orderMap[symbol] = std::move(orders);
-                        break;
-                    }
+                auto klines = QJsonArray();
+                while (klines.empty()){
+                    klines = downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.lowWindowBegin), instruments::timeToByteArray(window.lowWindowEnd));
                 }
-                else{
-                    break;
-                }
+                auto orders = updateOrders(klines, symbol, forLowTakeProfit, "Buy", currentPrice);
 
-
-            reply->deleteLater();
+                if(!orders.empty())
+                    orderMap[symbol] = std::move(orders);
         }
 
 }
@@ -521,4 +511,118 @@ QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QStr
     }
 
     return reply;
+}
+
+QJsonArray SmartMoney::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
+{
+    QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=1000");
+
+    if(!begin.isEmpty() && !end.isEmpty())
+        query.append("&start=" + begin.toUtf8() + "&end=" + end.toUtf8());
+    else if((begin.isEmpty() && !end.isEmpty()) || (!begin.isEmpty() && end.isEmpty())){
+        std::cout << "ERROR in downloadKlines: begin must not be empty when end is not empty or vice";
+        return QJsonArray();
+    }
+
+    QUrl url("https://api.bybit.com/v5/market/mark-price-kline?" + std::move(query));
+    url.setUserInfo("klines-" + symbol + "-" + interval);
+
+    auto customReplyParser = [](const QUrl &url, const QByteArray &data) ->QJsonObject
+        {
+            auto obj = QJsonDocument::fromJson(data).object();
+            auto retCode = obj["retCode"].toInt();
+            if(retCode != 0){
+                instruments::replyError(url, data);
+                return QJsonObject();
+            }
+            return std::move(obj);
+        };
+
+    auto obj = requests::get(url, query, "klines-" + symbol + "-" + interval, 10000, customReplyParser);
+    if(!obj.isEmpty()){
+        auto result = obj["result"].toObject();
+        auto list = result["list"].toArray();
+
+        if(!list.empty()){
+            //выдаем дальше
+            return std::move(list);
+        }
+    }
+    return QJsonArray();
+}
+
+std::map<QString, QJsonArray> SmartMoney::downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin, std::vector<QByteArray>::const_iterator end, const QString &timeBegin, const QString &timeEnd)
+{
+
+    std::vector<std::thread> thr_vec;
+    std::map<QString, QJsonArray> reply;
+    if(begin < end){
+        std::vector<QByteArray> downloadDeque(begin, end);
+        auto lambda = [&reply, &interval, &limit, &timeBegin, &timeEnd, this](const QString &symbol){
+            reply[symbol] = downloadKlines(symbol, interval, limit, timeBegin, timeEnd);
+        };
+        auto sucscess = false;
+        while (!sucscess){
+            if(!thr_vec.empty()){
+                thr_vec.clear();
+            }
+
+            auto dequeBegin = downloadDeque.begin();
+            auto dequeEnd = downloadDeque.end();
+
+            while(dequeBegin != dequeEnd){
+                thr_vec.emplace_back(lambda, *dequeBegin);
+                dequeBegin++;
+            }
+
+            for(auto &it : thr_vec){
+                if(it.joinable())
+                    it.join();
+            }
+
+            for(auto &it : reply){
+                if(!it.second.isEmpty()){
+                    auto finded = std::find(downloadDeque.begin(), downloadDeque.end(), it.first.toUtf8());
+                    if(finded != downloadDeque.end()){
+                        auto hiu = *finded;
+                        auto hueta = it.first;
+                        downloadDeque.erase(finded);
+                    }
+                }
+            }
+
+            if(downloadDeque.empty()){
+                sucscess = true;
+                break;
+            }
+        }
+    }
+    return reply;
+}
+
+QJsonObject requests::get(QUrl url, const QByteArray &query, const QString &userInfo, int recWindow_msec, std::function<QJsonObject (const QUrl &, const QByteArray &)> customReplyErrorParser)
+{
+    QEventLoop loop;
+    QTimer timer;
+    QNetworkAccessManager mgr;
+
+    QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &loop, SLOT(quit()));
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    QNetworkRequest req(url);
+
+    if(!userInfo.isEmpty())
+        url.setUserInfo(userInfo);
+
+    mgr.get(req);
+
+    timer.start(recWindow_msec);
+    QNetworkReply *reply = mgr.get(req);
+    loop.exec();
+
+    auto obj = customReplyErrorParser(url, reply->readAll());
+
+    reply->deleteLater();
+
+    return std::move(obj);
 }

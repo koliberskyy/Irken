@@ -58,6 +58,23 @@ struct TradingWindow{
 
 };
 
+class requests{
+public:
+    static QJsonObject get(QUrl url,
+                          const QByteArray &query,
+                          const QString &userInfo = "",
+                          int recWindow_msec = 10000,
+                          std::function<QJsonObject (const QUrl &, const QByteArray &)> customReplyErrorParser = [](const QUrl &url, const QByteArray &data) ->QJsonObject
+    {
+        auto obj = QJsonDocument::fromJson(data).object();
+        auto retCode = obj["retCode"].toInt();
+        if(retCode != 0 || data.isEmpty()){
+            instruments::replyError(url, data);
+            return QJsonObject();
+        }
+        return std::move(obj);
+    });
+};
 
 class SmartMoney : public QObject
 {
@@ -65,21 +82,34 @@ class SmartMoney : public QObject
 public:
     explicit SmartMoney(QObject *parent = nullptr);
     auto getOrders()const {return &orderMap;}
+    bool isUpdateFinished{true};
+    bool firstRun(){
+        if(firstRunTrigger){
+            firstRunTrigger = false;
+            return true;
+        }
+        return false;
+    }
 
 public slots:
-    void updateSmartMoney();
+    void updateSmartMoney(int klinesPackageSize = 6);
     void replyFinished(QNetworkReply *reply);
 private slots:
     void updateAreas(TradingWindow window, double currentPrice);
 signals:
     void updated(QJsonArray);
     void liquidsUpdated(TradingWindow);
+    void updateProgressChanged(int);
 
 private:
+    bool firstRunTrigger{true};
+
     std::unordered_map<QString, QList<QJsonObject>> orderMap;
     QNetworkAccessManager *manager;
     void updateLiquids(const QJsonArray &klines, const QString &symbol);
     QList<QJsonObject> updateOrders(const QJsonArray &klines, const QString &symbol, const QString &takeProfit, const QString &side, const double curentPrice);
+    QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
+    std::map<QString, QJsonArray> downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin = symbol::utf8.begin(), std::vector<QByteArray>::const_iterator end = symbol::utf8.end(), const QString &timeBegin = "", const QString &timeEnd = "");
 
 
 };

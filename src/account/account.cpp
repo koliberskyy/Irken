@@ -168,6 +168,9 @@ void Account::refreshOrderList(const QList<QJsonObject> &ordersToPost)
         if(ex->operator[]("reduceOnly").toBool()){
             ex = exist.erase(ex);
         }
+        else{
+            ex++;
+        }
     }
 
     //после этого цикла имеем два списка ордеров:

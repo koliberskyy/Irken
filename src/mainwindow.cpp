@@ -3,14 +3,14 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       dateTimeEdit(new QDateTimeEdit()),
+      smmUpdateprogressBar(new QProgressBar),
       timer(new QTimer(this)),
       ordUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       smmUpdateTime(new QDateTime(QDateTime::currentDateTime())),
-      posUpdateFluencySec(new qint64(1)),
-      ordUpdateFluencySec(new qint64(3)),
-      smmUpdateFluencySec(new qint64(120)),
-      smartMoney(new SmartMoney()),
+      posUpdateFluencySec(new qint64(3)),
+      ordUpdateFluencySec(new qint64(10)),
+      smmUpdateFluencySec(new qint64(300)),
       accTree(new QTreeWidget()),
       posTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
@@ -18,11 +18,21 @@ MainWindow::MainWindow(QWidget *parent)
       toolBox(new QToolBox())
 
 {
+    //обновляем фильтры перед началом работы приложения
+    auto filters = instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
+
+    smartMoney= (new SmartMoney());
+
     //status bar
     auto bar = statusBar();
     dateTimeEdit->setReadOnly(true);
     dateTimeEdit->setDisplayFormat("dd-MM-yyyy HH:mm:ss");
     bar->addWidget(dateTimeEdit);
+
+    bar->addWidget(smmUpdateprogressBar);
+    smmUpdateprogressBar->setRange(0, 100);
+    connect(smartMoney, SIGNAL(updateProgressChanged(int)), smmUpdateprogressBar, SLOT(setValue(int)));
+
     bar->show();
     timer->start(1000);
 
@@ -249,14 +259,57 @@ void MainWindow::updateSmmTree(QJsonArray orders)
     auto senderPtr = (SmartMoney*)sender();
     if(senderPtr == nullptr){
         smmTree->clear();
-        QStringList posColumns{"Символ", "Лонг/шорт", "ТВХ", "ТП", "СЛ", "Маржа", "Время зоны", "Обновлено", "id"};
+        QStringList posColumns{"Символ", "Лонг/шорт", "ТВХ", "ТП", "СЛ", "Обновлено", "id"};
         smmTree->setColumnCount(posColumns.size());
         smmTree->setHeaderLabels(posColumns);
 
-        smartMoney->updateSmartMoney();
     }
     else{
-        smartMoney->updateSmartMoney();
+        auto tmp = smartMoney->getOrders();
+
+        QList<QJsonObject> orderList;
+        for(auto it: *tmp){
+            orderList.append(it.second);
+        }
+
+        smmTree->clear();
+        for (auto it : orderList){
+            QStringList list;
+            list.append(it["symbol"].toString());
+            list.append(it["side"].toString());
+            list.append(it["price"].toString());
+            list.append(it["takeProfit"].toString());
+            list.append(it["stopLoss"].toString());
+
+            time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
+            std::tm bt = *std::localtime(&timer);
+            std::stringstream ss;
+            ss << std::put_time(&bt, "%H:%M:%S");
+            list.append(QString::fromStdString(ss.str()));
+
+            smmTree->addTopLevelItem(new QTreeWidgetItem(list));
+        }
+        if(orderList.isEmpty()){
+            QStringList list;
+            list.append("");
+            list.append("");
+            list.append("");
+            list.append("");
+            list.append("");
+
+            time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
+            std::tm bt = *std::localtime(&timer);
+            std::stringstream ss;
+            ss << std::put_time(&bt, "%H:%M:%S");
+            list.append(QString::fromStdString(ss.str()));
+
+            smmTree->addTopLevelItem(new QTreeWidgetItem(list));
+        }
+
+
+        for(auto &it:accountList){
+            it->refreshOrderList(orderList);
+        }
     }
 }
 
@@ -283,20 +336,12 @@ void MainWindow::timerChanged()
         ordUpdateTime->setTime(current.time());
     }
     //smartmoney update
-    if(smmUpdateTime->secsTo(current) > * smmUpdateFluencySec){
+    if(smmUpdateTime->secsTo(current) > *smmUpdateFluencySec || smartMoney->firstRun()){
+        if(smartMoney->isUpdateFinished)
+            smartMoney->updateSmartMoney(6);
 
-        auto tmp = smartMoney->getOrders();
-        auto breakpoint = true;
         smmUpdateTime->setDate(current.date());
         smmUpdateTime->setTime(current.time());
-
-        QList<QJsonObject> orders;
-        for(auto it: *tmp){
-            orders.append(it.second);
-        }
-        for(auto &it:accountList){
-            it->refreshOrderList(orders);
-        }
     }
 }
 

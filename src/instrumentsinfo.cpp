@@ -161,5 +161,8 @@ void replyError(const QUrl &url, const QByteArray &reply)
               << "\nuser Info: " << url.userInfo().toStdString() << std::endl;
 }
 
+QByteArray timeToByteArray(QDateTime count){
+    return QByteArray(std::to_string(count.toMSecsSinceEpoch()).c_str());}
+
 
 }//namespace bybit, instrumentsinfo

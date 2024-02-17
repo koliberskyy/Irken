@@ -95,6 +95,7 @@ inline int id(const QByteArray &symbol){
 namespace instruments{
 
 void replyError(const QUrl &url, const QByteArray &reply);
+QByteArray timeToByteArray(QDateTime count);
 
 
 enum class Filter_type{price, lotSize, leverage, lotSize_without_leverage_multipy};
