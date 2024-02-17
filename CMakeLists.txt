@@ -31,13 +31,8 @@ set(PROJECT_SOURCES
         src/account/account.h
         src/account/account.cpp
 
-        src/klines/klines.h
-        src/klines/klines.cpp
-
         src/klines/smartmoney.h
         src/klines/smartmoney.cpp
-        src/klines/graphicsview.h
-        src/klines/graphicsview.cpp
 
 )
 

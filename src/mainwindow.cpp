@@ -15,8 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
       posTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
       smmTree(new QTreeWidget()),
-      toolBox(new QToolBox()),
-      graphicsView(new GraphicsView)
+      toolBox(new QToolBox())
 
 {
     //status bar
@@ -40,7 +39,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolBox->addItem(posTree,  "Позиции");
     toolBox->addItem(ordTree, "Ордера");
     toolBox->addItem(smmTree, "SmartMoney");
-    toolBox->addItem(graphicsView, "Graphics");
 
     setCentralWidget(toolBox);
 

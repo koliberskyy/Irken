@@ -12,7 +12,6 @@
 
 #include "account.h"
 #include "smartmoney.h"
-#include "graphicsview.h"
 
 class MainWindow : public QMainWindow
 {
@@ -56,7 +55,6 @@ private:
     void updateAccounts();
     void createConnctions();
 
-    GraphicsView *graphicsView;
 
 };
 #endif // MAINWINDOW_H
