@@ -18,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent)
       toolBox(new QToolBox())
 
 {
+
+
     //обновляем фильтры перед началом работы приложения
     auto filters = instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
 
@@ -49,8 +51,10 @@ MainWindow::MainWindow(QWidget *parent)
     toolBox->addItem(posTree,  "Позиции");
     toolBox->addItem(ordTree, "Ордера");
     toolBox->addItem(smmTree, "SmartMoney");
+    toolBox->addItem(new CandleStickWidget(), "График");
 
     setCentralWidget(toolBox);
+
 
 }
 

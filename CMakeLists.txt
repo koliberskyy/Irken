@@ -11,8 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core Network Test REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Network Test REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core Network Test Charts REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Network Test Charts REQUIRED)
 
 include_directories(
     src
@@ -33,6 +33,8 @@ set(PROJECT_SOURCES
 
         src/klines/smartmoney.h
         src/klines/smartmoney.cpp
+        src/klines/candlestickwidget.h
+        src/klines/candlestickwidget.cpp
 
 )
 
@@ -64,6 +66,7 @@ target_link_libraries(Irken
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Network
     Qt${QT_VERSION_MAJOR}::Test
+    Qt${QT_VERSION_MAJOR}::Charts
     Threads::Threads)
 set_target_properties(Irken PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

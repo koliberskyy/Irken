@@ -9,14 +9,14 @@ SmartMoney::SmartMoney(QObject *parent)
 
 void SmartMoney::updateSmartMoney(int klinesPackageSize)
 {
+    orderMap.clear();
     //копируем по значению так как после thr.detach() klinesPackageSize перестанет сущетсвовать
-    std::thread thr([this, packageSize = klinesPackageSize](){
+    auto lambda = [this, packageSize = klinesPackageSize](){
         isUpdateFinished = false;
         emit updateProgressChanged(1);
-        orderMap.clear();
-        std::map<QString, QJsonArray> oneWeekTf;
+        std::unordered_map<QString, QJsonArray> oneWeekTf;
 
-        auto download = [&packageSize, this](std::map<QString, QJsonArray> *mapPtr, const QString &interval, const QString &limit){
+        auto download = [&packageSize, this](std::unordered_map<QString, QJsonArray> *mapPtr, const QString &interval, const QString &limit){
             auto begin = symbol::utf8.begin();
             auto it = symbol::utf8.begin();
             auto end = symbol::utf8.end();
@@ -27,7 +27,8 @@ void SmartMoney::updateSmartMoney(int klinesPackageSize)
                 it++;
                 if(counter == packageSize || it == end){
                     counter = 0;
-                    mapPtr->merge(downloadKlinesPackage(interval, limit, begin, it));
+                    auto pack = downloadKlinesPackage(interval, limit, begin, it);
+                    mapPtr->insert(pack.begin(), pack.end());
                     begin = it;
                 }
             }
@@ -37,10 +38,8 @@ void SmartMoney::updateSmartMoney(int klinesPackageSize)
         emit updateProgressChanged(99-oneWeekTf.size());
         auto currentProgress = 99-oneWeekTf.size();
         std::vector<std::thread> thr_vec;
-        auto lambda = [&oneWeekTf, this, &currentProgress](std::map<QString, QJsonArray>::const_iterator it){
-            if(it != oneWeekTf.cend()){
-                updateLiquids(it->second, it->first);
-            }
+        auto lambda = [&oneWeekTf, this, &currentProgress](std::unordered_map<QString, QJsonArray>::const_iterator it){
+            updateLiquids(it->second, it->first);
             currentProgress++;
             emit updateProgressChanged(currentProgress);
         };
@@ -55,7 +54,8 @@ void SmartMoney::updateSmartMoney(int klinesPackageSize)
         emit updateProgressChanged(100);
         isUpdateFinished = true;
         emit(updated(QJsonArray()));
-    });
+    };
+    std::thread thr(lambda);
     thr.detach();
 }
 
@@ -82,7 +82,7 @@ void SmartMoney::replyFinished(QNetworkReply *reply)
     reply->deleteLater();
 }
 
-void SmartMoney::updateAreas(TradingWindow window, double currentPrice)
+void SmartMoney::updateAreas(TradingWindow window, double filterPrice, double currentPrice)
 {
     auto symbol = window.symbol;
 
@@ -100,9 +100,9 @@ void SmartMoney::updateAreas(TradingWindow window, double currentPrice)
         for(auto interval: symbol::intervals){
             auto klines = QJsonArray();
             while (klines.empty()){
-                klines = downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.highWindowBegin), instruments::timeToByteArray(window.highWindowEnd));
+                klines = Klines::downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.highWindowBegin), instruments::timeToByteArray(window.highWindowEnd));
             }
-            auto orders = updateOrders(klines, symbol, forHighTakeProfit, "Sell", currentPrice);
+            auto orders = updateOrders(klines, symbol, forHighTakeProfit, "Sell", currentPrice, filterPrice);
 
             if(!orders.empty())
                 orderMap[symbol] = std::move(orders);
@@ -113,9 +113,9 @@ void SmartMoney::updateAreas(TradingWindow window, double currentPrice)
             for(auto interval: symbol::intervals){
                 auto klines = QJsonArray();
                 while (klines.empty()){
-                    klines = downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.lowWindowBegin), instruments::timeToByteArray(window.lowWindowEnd));
+                    klines = Klines::downloadKlines(symbol, interval, "1000", instruments::timeToByteArray(window.lowWindowBegin), instruments::timeToByteArray(window.lowWindowEnd));
                 }
-                auto orders = updateOrders(klines, symbol, forLowTakeProfit, "Buy", currentPrice);
+                auto orders = updateOrders(klines, symbol, forLowTakeProfit, "Buy", currentPrice, filterPrice);
 
                 if(!orders.empty())
                     orderMap[symbol] = std::move(orders);
@@ -263,28 +263,28 @@ void SmartMoney::updateLiquids(const QJsonArray &klines, const QString &symbol)
 
     if((currentPrice > window.highWindowPriceLow && currentPrice < window.highWindowPriceHigh)){
         window.isHighZoneAvaible = true;
-        updateAreas(window, highestPrice);
+        updateAreas(window, highestPrice, currentPrice);
     }
 
     if((currentPrice > window.lowWindowPriceLow && currentPrice < window.lowWindowPriceHigh)){
         window.isHighZoneAvaible = false;
-        updateAreas(window, lowestPrice);
+        updateAreas(window, lowestPrice, currentPrice);
     }
 
 
 
 }
 
-QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QString &symbol, const QString &takeProfit, const QString &side, const double currentPrice)
+QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QString &symbol, const QString &takeProfit, const QString &side, const double currentPrice, const double filterPrice)
 {
 
     QList<QJsonObject> reply;
 
-    auto time =     [&klines](int i){return klines.at(i).toArray()[0].toString().toLongLong(); };
-    auto open =     [&klines](int i){return klines.at(i).toArray()[1].toString().toDouble(); };
-    auto high =     [&klines](int i){return klines.at(i).toArray()[2].toString().toDouble(); };
-    auto low =      [&klines](int i){return klines.at(i).toArray()[3].toString().toDouble(); };
-    auto close =    [&klines](int i){return klines.at(i).toArray()[4].toString().toDouble(); };
+    auto time =     [&klines](int i){return Klines::time(klines.at(i).toArray());};
+    auto open =     [&klines](int i){return Klines::time(klines.at(i).toArray()); };
+    auto high =     [&klines](int i){return Klines::time(klines.at(i).toArray()); };
+    auto low =      [&klines](int i){return Klines::time(klines.at(i).toArray()); };
+    auto close =    [&klines](int i){return Klines::time(klines.at(i).toArray()); };
 
     auto range =        [](double hight, double low){if(hight > low )return hight - low; else return -1.0;};
     auto isInclude =    [](double price, double hight, double low){return (price < hight && price > low);};
@@ -315,12 +315,10 @@ QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QStr
         return lowest;
     };
 
-    auto ORDERBLOOOOOOKSUUUUKAAA = [&time, &high, &low, &symbol, &side, &takeProfit, &reply, &currentPrice, &findLow, &findHigh](int index){
+    auto ORDERBLOOOOOOKSUUUUKAAA = [&time, &high, &low, &symbol, &side, &takeProfit, &reply, currentPrice, &findLow, &findHigh, filterPrice](int index){
         QJsonObject obj;
-        auto dateTime = QDateTime::fromMSecsSinceEpoch(time(index));
         auto h = high(index);
         auto l = low(index);
-        auto breakPoint = true;
         auto price = (h+l)/2;// TBX
 
         auto actuality = price;
@@ -345,8 +343,8 @@ QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QStr
         auto lowest = findLow(0, index-2);
         auto highest = findHigh(0, index-2);
 
-        if((side == "Buy" && price < currentPrice && price < lowest)
-                || (side == "Sell" && price > currentPrice && price > highest)){
+        if((side == "Buy" && price < filterPrice && price < lowest)
+                || (side == "Sell" && price > filterPrice && price > highest)){
             if(actuality < settings::actualityFilter){
                 auto stopLoss = [&side, &h, &l](){
                     if(side == "Buy"){
@@ -513,7 +511,7 @@ QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QStr
     return reply;
 }
 
-QJsonArray SmartMoney::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
+QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
 {
     QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=1000");
 
@@ -551,15 +549,23 @@ QJsonArray SmartMoney::downloadKlines(const QString &symbol, const QString &inte
     return QJsonArray();
 }
 
-std::map<QString, QJsonArray> SmartMoney::downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin, std::vector<QByteArray>::const_iterator end, const QString &timeBegin, const QString &timeEnd)
+QCandlestickSet *Klines::toQCandlestickSetPtr(const QJsonArray &kline)
+{
+    return new QCandlestickSet(open(kline), high(kline), low(kline), close(kline), time(kline));
+}
+
+std::unordered_map<QString, QJsonArray> SmartMoney::downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin, std::vector<QByteArray>::const_iterator end, const QString &timeBegin, const QString &timeEnd)
 {
 
     std::vector<std::thread> thr_vec;
-    std::map<QString, QJsonArray> reply;
+    std::mutex mtx;
+    std::unordered_map<QString, QJsonArray> reply;
     if(begin < end){
-        std::vector<QByteArray> downloadDeque(begin, end);
-        auto lambda = [&reply, &interval, &limit, &timeBegin, &timeEnd, this](const QString &symbol){
-            reply[symbol] = downloadKlines(symbol, interval, limit, timeBegin, timeEnd);
+        std::vector<QString> downloadDeque(begin, end);
+        auto lambda = [&reply, &interval, &limit, &timeBegin, &timeEnd, this, &mtx](const QString &symbol){
+            mtx.lock();
+            reply[symbol] = Klines::downloadKlines(symbol, interval, limit, timeBegin, timeEnd);
+            mtx.unlock();
         };
         auto sucscess = false;
         while (!sucscess){
@@ -582,10 +588,8 @@ std::map<QString, QJsonArray> SmartMoney::downloadKlinesPackage(const QString &i
 
             for(auto &it : reply){
                 if(!it.second.isEmpty()){
-                    auto finded = std::find(downloadDeque.begin(), downloadDeque.end(), it.first.toUtf8());
+                    auto finded = std::find(downloadDeque.begin(), downloadDeque.end(), it.first);
                     if(finded != downloadDeque.end()){
-                        auto hiu = *finded;
-                        auto hueta = it.first;
                         downloadDeque.erase(finded);
                     }
                 }

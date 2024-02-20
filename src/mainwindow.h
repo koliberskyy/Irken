@@ -11,6 +11,8 @@
 
 #include <memory>
 
+#include "candlestickwidget.h"
+
 #include "account.h"
 #include "smartmoney.h"
 

@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QTimer>
 #include <QList>
+#include <QCandlestickSet>
+
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -75,6 +77,25 @@ public:
         return std::move(obj);
     });
 };
+class Klines{
+public:
+    /*!
+    Возвращает массив свечей ВСЕХ!!!!!!!
+    */
+    static QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
+
+    /*!
+    принимает ОДНУ свечу!!!!!!!
+    */
+    static QCandlestickSet *toQCandlestickSetPtr(const QJsonArray &kline);
+
+    static long long    time    (const QJsonArray &kline)   {return kline[0].toString().toLongLong(); }
+    static double       open    (const QJsonArray &kline)   {return kline[1].toString().toDouble(); }
+    static double       high    (const QJsonArray &kline)   {return kline[2].toString().toDouble(); }
+    static double       low     (const QJsonArray &kline)   {return kline[3].toString().toDouble(); }
+    static double       close   (const QJsonArray &kline)   {return kline[4].toString().toDouble(); }
+
+};
 
 class SmartMoney : public QObject
 {
@@ -91,11 +112,12 @@ public:
         return false;
     }
 
+
 public slots:
     void updateSmartMoney(int klinesPackageSize = 6);
     void replyFinished(QNetworkReply *reply);
 private slots:
-    void updateAreas(TradingWindow window, double currentPrice);
+    void updateAreas(TradingWindow window, double filterPrice, double currentPrice);
 signals:
     void updated(QJsonArray);
     void liquidsUpdated(TradingWindow);
@@ -107,9 +129,8 @@ private:
     std::unordered_map<QString, QList<QJsonObject>> orderMap;
     QNetworkAccessManager *manager;
     void updateLiquids(const QJsonArray &klines, const QString &symbol);
-    QList<QJsonObject> updateOrders(const QJsonArray &klines, const QString &symbol, const QString &takeProfit, const QString &side, const double curentPrice);
-    QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
-    std::map<QString, QJsonArray> downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin = symbol::utf8.begin(), std::vector<QByteArray>::const_iterator end = symbol::utf8.end(), const QString &timeBegin = "", const QString &timeEnd = "");
+    QList<QJsonObject> updateOrders(const QJsonArray &klines, const QString &symbol, const QString &takeProfit, const QString &side, const double curentPrice, const double filterPrice);
+    std::unordered_map<QString, QJsonArray> downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin = symbol::utf8.begin(), std::vector<QByteArray>::const_iterator end = symbol::utf8.end(), const QString &timeBegin = "", const QString &timeEnd = "");
 
 
 };
