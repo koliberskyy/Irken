@@ -8,6 +8,7 @@
 #include <QStatusBar>
 #include <QTimer>
 #include <QProgressBar>
+#include <QComboBox>
 
 #include <memory>
 
@@ -33,6 +34,7 @@ public slots:
     void updateSmmTree(QJsonArray orders);
 private slots:
     void timerChanged();
+    void graphicControlComboChanged();
 
 private:
     QToolBox *toolBox;
@@ -49,12 +51,19 @@ private:
     std::unique_ptr<qint64> ordUpdateFluencySec;
     std::unique_ptr<qint64> smmUpdateFluencySec;
 
-
-
     QTreeWidget *accTree;
     QTreeWidget *posTree;
     QTreeWidget *ordTree;
     QTreeWidget *smmTree;
+
+    //graphics control pannel
+    CandleStickWidget * candlestickWidget;
+
+    QComboBox *symbolComboBox;
+    QComboBox *timeframeComboBox;
+
+    QPushButton *liquidityButton;
+    QPushButton *smartMoneyButton;
 
     void updateAccounts();
     void createConnctions();

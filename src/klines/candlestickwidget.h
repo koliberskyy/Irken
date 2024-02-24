@@ -14,13 +14,95 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QLineSeries>
+#include <QAreaSeries>
+#include <QLine>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QDialog>
+#include <QComboBox>
+#include <QToolTip>
+#include <unordered_map>
 #include "smartmoney.h"
+
+struct AbstractLiquid{
+    QLineSeries *series;
+    qreal count;
+    qreal timestamp;
+    qreal endtimestamp;
+    virtual bool isFarther(AbstractLiquid*) = 0;
+    void set(QLineSeries* s, qreal c, qreal t, qreal et){series = s; count = c; timestamp = t; endtimestamp = et;}
+};
+struct HighLiquid : public AbstractLiquid{
+    virtual bool isFarther(AbstractLiquid* other)override{ return count > other->count;}
+};
+struct LowLiquid : public AbstractLiquid{
+    virtual bool isFarther(AbstractLiquid* other)override{ return count < other->count;}
+};
+struct AbstractArea{
+    QAreaSeries *series;
+    QLineSeries *stopLine;
+    QLineSeries *_05Series;
+    QLineSeries *_03Series;
+    QLineSeries *_07Series;
+
+    QString type;
+    qreal high;
+    qreal low;
+    qreal timestamp;
+    bool isBuyArea;
+
+    static constexpr qreal stopStep{0.005};
+
+    qreal particional(qreal count){return (high-low)*count + low;}
+    qreal _07(){return particional(0.7); }
+    qreal _05(){return particional(0.5);}
+    qreal _03(){return particional(0.3);}
+
+    qreal priceFromRange(qreal price, qreal range){return price * range;}
+
+    qreal _stop(){if(isBuyArea) return priceFromRange(low, 1 - stopStep); else return priceFromRange(high, 1+stopStep);}
+    void attachAxis(QAbstractAxis* axisX, QAbstractAxis* axisY){
+        series->attachAxis(axisX);
+        series->attachAxis(axisY);
+
+        stopLine->attachAxis(axisX);
+        stopLine->attachAxis(axisY);
+
+        _05Series->attachAxis(axisX);
+        _05Series->attachAxis(axisY);
+
+        _03Series->attachAxis(axisX);
+        _03Series->attachAxis(axisY);
+
+        _07Series->attachAxis(axisX);
+        _07Series->attachAxis(axisY);
+    }
+    void addToChart(QChart *chart){
+        chart->addSeries(series);
+        chart->addSeries(_07Series);
+        chart->addSeries(_05Series);
+        chart->addSeries(_03Series);
+        chart->addSeries(stopLine);
+    }
+    void removeFromChart(QChart *chart){
+        chart->removeSeries(series);
+        chart->removeSeries(_07Series);
+        chart->removeSeries(_05Series);
+        chart->removeSeries(_03Series);
+        chart->removeSeries(stopLine);    }
+};
 
 class CandleStickWidget : public QChartView
 {
     Q_OBJECT
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
+public slots:
+    void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
+    void autoDrawLiquidities();
+    void autoDrawAreas();
 
 protected:
 
@@ -31,22 +113,44 @@ protected:
     virtual void keyPressEvent(QKeyEvent *event) override;
     virtual void keyReleaseEvent(QKeyEvent *event) override;
     virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
-private:
 
+private slots:
+    void klineClicked(QCandlestickSet *set);
+    void areaClicked();
+private:
     QChart *chart {nullptr};
     QPoint m_oPrePos;
     bool m_bLeftButtonPressed{false};
     bool ctrlButtonPressed{false};
     QCandlestickSeries *klinesSeries {nullptr};
+
+    QString currentSymbol;
+    QString currentTimeframe;
+    std::unordered_map<QString, QList<HighLiquid>> hightsList;
+    std::unordered_map<QString, QList<LowLiquid>> lowsList;
+    std::unordered_map<QString, QList<AbstractArea>> areas;
+
     QAbstractAxis *axisX;
     QAbstractAxis *axisY;
+
+    bool areaAddModeActivated{false};
+    bool hightsAddModeActivated{false};
+    bool lowsAddModeActivated{false};
+    bool delModeActivated{false};
+    void deactivateAllMods(bool activate = false);
+    bool isSomeModeActivated();
 
     void setKlines(const QString &symbol, const QString &interval, const QString &limit =  "1000");
     void setLiquidities(QAbstractAxis *axisX, QAbstractAxis *axisY);
     QAbstractAxis* setAxisX(QCandlestickSeries *klineSeries, QChart *chart);
     QAbstractAxis* setAxisY(QCandlestickSeries *klineSeries, QChart *chart);
 
+    void addLow(qreal low, qreal beginTimeStamp, qreal endTimeStamp = -1);
+    void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
+    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea);
+    void delLiquid(qreal liquid);
 
+    void addExistSerieses();
 
 
 };

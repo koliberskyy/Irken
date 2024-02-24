@@ -79,6 +79,16 @@ const std::vector<QByteArray> utf8 = {
 const std::vector<QByteArray> intervals = {
     "240"
 };
+const std::vector<QByteArray> timeframes = {
+    "W",
+    "D",
+    "240",
+    "120",
+    "60",
+    "30",
+    "15",
+    "5"
+};
 
 
 

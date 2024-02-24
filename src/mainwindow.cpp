@@ -51,7 +51,39 @@ MainWindow::MainWindow(QWidget *parent)
     toolBox->addItem(posTree,  "Позиции");
     toolBox->addItem(ordTree, "Ордера");
     toolBox->addItem(smmTree, "SmartMoney");
-    toolBox->addItem(new CandleStickWidget(), "График");
+
+    //graphics control
+    candlestickWidget = new CandleStickWidget();
+
+    symbolComboBox = new QComboBox();
+    for(auto symbol : symbol::utf8){
+        symbolComboBox->addItem(symbol);
+    }
+    QObject::connect(symbolComboBox, &QComboBox::currentTextChanged, this, &MainWindow::graphicControlComboChanged);
+
+    timeframeComboBox = new QComboBox();
+    for(auto timeframe : symbol::timeframes){
+        timeframeComboBox->addItem(timeframe);
+    }
+    QObject::connect(timeframeComboBox, &QComboBox::currentTextChanged, this, &MainWindow::graphicControlComboChanged);
+
+    liquidityButton = new QPushButton("Ликвидности");
+    QObject::connect(liquidityButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawLiquidities);
+
+    smartMoneyButton = new QPushButton("Зоны");
+    QObject::connect(smartMoneyButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawAreas);
+
+    auto graphicGrid = new QGridLayout();
+    graphicGrid->addWidget(symbolComboBox, 0, 0, Qt::AlignCenter);
+    graphicGrid->addWidget(timeframeComboBox, 0, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(liquidityButton, 0, 2, Qt::AlignCenter);
+    graphicGrid->addWidget(smartMoneyButton, 0, 3, Qt::AlignCenter);
+    graphicGrid->addWidget(candlestickWidget, 1, 0, 1, graphicGrid->columnCount());
+
+    auto graphicWgt = new QWidget();
+    graphicWgt->setLayout(graphicGrid);
+
+    toolBox->addItem(graphicWgt, "График");
 
     setCentralWidget(toolBox);
 
@@ -347,6 +379,11 @@ void MainWindow::timerChanged()
         smmUpdateTime->setDate(current.date());
         smmUpdateTime->setTime(current.time());
     }
+}
+
+void MainWindow::graphicControlComboChanged()
+{
+    candlestickWidget->updateKlines(symbolComboBox->currentText(), timeframeComboBox->currentText());
 }
 
 

@@ -36,6 +36,7 @@ set(PROJECT_SOURCES
         src/klines/candlestickwidget.h
         src/klines/candlestickwidget.cpp
 
+
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
