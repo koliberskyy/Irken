@@ -17,6 +17,7 @@ void CandleStickWidget::autoDrawLiquidities()
     if(klinesSeries != nullptr){
 
         QList<HighLiquid> hights;
+        QList<LowLiquid> lows;
 
         auto list = klinesSeries->sets();
 
@@ -31,7 +32,7 @@ void CandleStickWidget::autoDrawLiquidities()
 
         for(; current != list.end(); current++){
             next++;
-
+            //hights
             if((*current)->high() > (*prev)->high()){
                 currentHigh = (*current);
             }
@@ -43,8 +44,22 @@ void CandleStickWidget::autoDrawLiquidities()
                         currentHigh = nullptr;
                     }
             }
+            //lows
+            if((*current)->low() < (*prev)->low()){
+                currentLow = (*current);
+            }
+            else if(next != list.end() && currentLow != nullptr){
+                    if((*next)->low() > currentLow->low()){
+                        LowLiquid ll;
+                        ll.set(nullptr, currentLow->low(), currentLow->timestamp(), 0);
+                        lows.push_back(ll);
+                        currentLow = nullptr;
+                    }
+            }
             prev=current;
         }
+
+        //сбор hight
         auto high = hights.begin();
         while(high != hights.end()){
             auto set = list.begin();
@@ -55,14 +70,14 @@ void CandleStickWidget::autoDrawLiquidities()
                 }
             }
             if(set != list.end()){
-                while((*set)->high() < (*high).count){
+                while((*set)->high() < high->count){
                     set++;
                     if(set == list.end()){
                         break;
                     }
                 }
                 if(set != list.end()){
-                    addHigh((*high).count, (*high).timestamp, (*set)->timestamp());
+                    addHigh(high->count, high->timestamp, (*set)->timestamp());
                     high = hights.erase(high);
                 }
                 else
@@ -71,16 +86,149 @@ void CandleStickWidget::autoDrawLiquidities()
             else
                 high++;
         }
+
+        //сбор lows
+        auto low = lows.begin();
+        while(low != lows.end()){
+            auto set = list.begin();
+            while((*set)->timestamp() <= low->timestamp){
+                set++;
+                if(set == list.end()){
+                    break;
+                }
+            }
+            if(set != list.end()){
+                while((*set)->low() > low->count){
+                    set++;
+                    if(set == list.end()){
+                        break;
+                    }
+                }
+                if(set != list.end()){
+                    addLow(low->count, low->timestamp, (*set)->timestamp());
+                    low = lows.erase(low);
+                }
+                else
+                    low++;
+            }
+            else
+                low++;
+        }
+
+        //добавлеие несобранных
         for(auto high : hights){
             addHigh(high.count, high.timestamp);
         }
+        for(auto low : lows){
+            addLow(low.count, low.timestamp);
+        }
+
 
     }
 }
 
 void CandleStickWidget::autoDrawAreas()
 {
+    //imbalance
+    auto list = klinesSeries->sets();
+    QList<AbstractArea> imbalances;
 
+    auto prev = list.begin();
+    auto curr = prev + 1;
+    auto next = curr + 1;
+    while(next != list.end()){
+
+        //войд имбаланса больше размера одной из соседних свечей, а другая не прекрывает половину его тела
+        auto body = (*curr)->close() - (*curr)->open();
+        auto isBuyArea = body > 0;
+
+        if(!isBuyArea)
+            body *= (-1);
+
+        auto size_prev = (*prev)->high() - (*prev)->low();
+        auto size_next = (*next)->high() - (*next)->low();
+
+        qreal voidImbalance;
+        qreal middle;
+        if(isBuyArea){
+            voidImbalance = (*next)->low() - (*prev)->high();
+            //middle = (*prev)->high() + voidImbalance/2;
+            middle = (*curr)->open() + body/2;
+
+//            if(voidImbalance > size_prev && middle < (*next)->low()
+//            || voidImbalance > size_next && middle > (*prev)->high()){
+            if(voidImbalance > size_prev && middle < (*next)->low()){
+
+                AbstractArea imba;
+                imba.isBuyArea = isBuyArea;
+                imba.high = (*next)->low();
+                imba.low = (*prev)->high();
+                imba.timestamp = (*curr)->timestamp();
+                imba.type = "im";
+
+                imbalances.push_back(std::move(imba));
+            }
+
+
+        }
+        else{
+            voidImbalance = (*prev)->low() - (*next)->high();
+            //middle = (*next)->low() + voidImbalance/2;
+            middle = (*curr)->close() + body/2;
+
+//            if(voidImbalance > size_prev && middle > (*next)->high()
+//            || voidImbalance > size_next && middle < (*prev)->low()){
+            if(voidImbalance > size_prev && middle > (*next)->high()){
+                AbstractArea imba;
+                imba.isBuyArea = isBuyArea;
+                imba.high = (*prev)->low();
+                imba.low = (*next)->high();
+                imba.timestamp = (*curr)->timestamp();
+                imba.type = "im";
+
+                imbalances.push_back(std::move(imba));
+            }
+
+        }
+
+        prev++;
+        curr++;
+        next++;
+    }
+
+    //сбор
+    auto imbalance = imbalances.begin();
+    while(imbalance != imbalances.end()){
+        auto set = list.begin();
+        while((*set)->timestamp() <= imbalance->timestamp){
+            set++;
+            if(set == list.end()){
+                break;
+            }
+        }
+        if(set != list.end()){
+                //тут стоит логическое не ВНИМАНИЕ
+            while(!((*set)->low() <= imbalance->_05() && (*set)->high() >= imbalance->_05())){
+                set++;
+                if(set == list.end()){
+                    break;
+                }
+            }
+            if(set != list.end()){
+                addArea(imbalance->high, imbalance->low, imbalance->timestamp, imbalance->isBuyArea, (*set)->timestamp());
+                imbalance = imbalances.erase(imbalance);
+            }
+            else
+                imbalance++;
+        }
+        else
+            imbalance++;
+    }
+
+    //добавление несобранных
+    for(auto &imbalance : imbalances){
+        addArea(imbalance.high, imbalance.low, imbalance.timestamp, imbalance.isBuyArea);
+    }
 }
 
 void CandleStickWidget::mouseMoveEvent(QMouseEvent *pEvent)
@@ -505,7 +653,7 @@ void CandleStickWidget::addLow(qreal low, qreal beginTimeStamp, qreal endTimeSta
 
     chart->addSeries(lineSeries);
 
-    lineSeries->setColor(QColor(0, 0, 255, 255/2));
+    lineSeries->setColor(QColor(0, 0, 255, 50));
     lineSeries->attachAxis(axisX);
     lineSeries->attachAxis(axisY);
 
@@ -540,13 +688,17 @@ void CandleStickWidget::addHigh(qreal high, qreal beginTimeStamp, qreal endTimeS
     hightsList[currentSymbol].append(std::move(hl));
 }
 
-void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea)
+void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp)
 {
     AbstractArea area;
     area.high = high;
     area.low = low;
     area.timestamp = beginTimeStamp;
     area.isBuyArea = isBuyArea;
+
+    if(endTimeStamp < 0){
+        endTimeStamp = klinesSeries->sets().last()->timestamp();
+    }
 
     auto series0 = new QLineSeries();
     auto series1 = new QLineSeries();
@@ -556,25 +708,25 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     auto seriesStop = new QLineSeries();
 
     series0->append(beginTimeStamp, high);
-    series0->append(klinesSeries->sets().last()->timestamp(), high);
+    series0->append(endTimeStamp, high);
 
     series1->append(beginTimeStamp, low);
-    series1->append(klinesSeries->sets().last()->timestamp(), low);
+    series1->append(endTimeStamp, low);
 
     series07->append(beginTimeStamp, area._07());
-    series07->append(klinesSeries->sets().last()->timestamp(), area._07());
+    series07->append(endTimeStamp, area._07());
     series07->setColor(QColor(255, 116, 23));
 
     series05->append(beginTimeStamp, area._05());
-    series05->append(klinesSeries->sets().last()->timestamp(), area._05());
+    series05->append(endTimeStamp, area._05());
     series05->setColor(QColor(255, 116, 23));
 
     series03->append(beginTimeStamp, area._03());
-    series03->append(klinesSeries->sets().last()->timestamp(), area._03());
+    series03->append(endTimeStamp, area._03());
     series03->setColor(QColor(255, 116, 23));
 
     seriesStop->append(beginTimeStamp, area._stop());
-    seriesStop->append(klinesSeries->sets().last()->timestamp(), area._stop());
+    seriesStop->append(endTimeStamp, area._stop());
     seriesStop->setColor(Qt::red);
 
     auto series = new QAreaSeries(series0, series1);

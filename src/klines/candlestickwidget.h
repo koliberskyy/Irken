@@ -51,6 +51,7 @@ struct AbstractArea{
     qreal high;
     qreal low;
     qreal timestamp;
+    qreal endtimestamp;
     bool isBuyArea;
 
     static constexpr qreal stopStep{0.005};
@@ -147,7 +148,7 @@ private:
 
     void addLow(qreal low, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
-    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea);
+    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1);
     void delLiquid(qreal liquid);
 
     void addExistSerieses();
