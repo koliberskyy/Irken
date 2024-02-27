@@ -82,7 +82,9 @@ const std::vector<QByteArray> intervals = {
 const std::vector<QByteArray> timeframes = {
     "W",
     "D",
+    "360",
     "240",
+    "180",
     "120",
     "60",
     "30",
@@ -159,6 +161,7 @@ public:
     double maxPrice(const QString &symbol);
     double minPrice(const QString &symbol);
     double stepPrice(const QString &symbol);
+    int dap(const QString &symbol);
 
     explicit InstrumentsInfo();
     void update_filters();
@@ -211,6 +214,14 @@ inline double stepPrice(const QString &symbol){
     }
 
     return ii->stepPrice(symbol);
+}
+
+inline double dap(const QString &symbol){
+    if (ii == nullptr){
+        ii = std::make_unique<InstrumentsInfo>();
+    }
+
+    return ii->dap(symbol);
 }
 
 }//namespace instrumetntinfo

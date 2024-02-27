@@ -7,6 +7,7 @@ Account::Account(QJsonObject &&acc_json, QObject *parent)
 
     data["balance"] = "-1.0";
 
+    //************** ПЛЕЧИ
     //setLeverage();
 
     reduceTable.emplace_back(reducePair{10, 0, 0});
@@ -575,7 +576,7 @@ void Account::ordDownloaded(const QJsonObject &obj)
     emit ordersUpdated(arr);
 }
 
-void Account::setLeverage()
+void Account::setLeverage(double leverage)
 {
     std::cout << QJsonDocument(this->data).toJson().toStdString();
     for(auto &symbol : symbol::utf8){

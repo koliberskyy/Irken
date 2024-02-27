@@ -394,7 +394,7 @@ void MainWindow::timerChanged()
     dateTimeEdit->setDateTime(current);
 
     //update pos
-    if(posUpdateTime->secsTo(current) > *posUpdateFluencySec){
+    if(posUpdateTime->secsTo(current) > *posUpdateFluencySec && positionControlActivated){
         for(auto &it : accountList){
             it->updatePositions();
         }

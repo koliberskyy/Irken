@@ -108,7 +108,7 @@ private:
     void parceReply(const QJsonObject &obj, const QUrl &url);
     void posDownloaded(const QJsonObject &obj);
     void ordDownloaded(const QJsonObject &obj);
-    void setLeverage();
+    void setLeverage(double leverage = 20.0);
 
 public:
     static std::vector<std::pair<QByteArray, QByteArray> > make_headers(const QByteArray &data, const QByteArray &api_key, const QByteArray &secret_key);

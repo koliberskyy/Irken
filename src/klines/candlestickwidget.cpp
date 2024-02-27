@@ -502,6 +502,7 @@ void CandleStickWidget::areaDoubleClicked()
         auto *form = new QFormLayout();
         //dsb_price
         auto dsb_price = new QDoubleSpinBox();
+        dsb_price->setDecimals(instruments::dap(currentSymbol));
         dsb_price->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
         dsb_price->setSingleStep(instruments::stepPrice(currentSymbol));
         if(area->isBuyArea){
@@ -513,6 +514,7 @@ void CandleStickWidget::areaDoubleClicked()
 
         //dsb_tp
         auto dsb_tp = new QDoubleSpinBox();
+        dsb_tp->setDecimals(instruments::dap(currentSymbol));
         dsb_tp->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
         dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
         if(takeProfit.series != nullptr){
@@ -521,6 +523,7 @@ void CandleStickWidget::areaDoubleClicked()
 
         //dsb_sl
         auto dsb_sl = new QDoubleSpinBox();
+        dsb_sl->setDecimals(instruments::dap(currentSymbol));
         dsb_sl->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
         dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
         dsb_sl->setValue(area->_stop());
@@ -811,7 +814,7 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     area.isBuyArea = isBuyArea;
 
     if(endTimeStamp < 0){
-        endTimeStamp = klinesSeries->sets().last()->timestamp();
+        endTimeStamp = klinesSeries->sets().last()->timestamp() + (klinesSeries->sets().last()->timestamp() - klinesSeries->sets().at(klinesSeries->sets().size() - 2)->timestamp()) * 5;
     }
 
     auto series0 = new QLineSeries();

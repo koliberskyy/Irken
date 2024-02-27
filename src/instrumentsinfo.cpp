@@ -3,7 +3,7 @@ namespace instruments{
 
 double InstrumentsInfo::trading_leverage(const QByteArray &symbol)
 {
-    return 10.0;
+    return 20.0;
 }
 
 double InstrumentsInfo::maxLeverage(const QByteArray &symbol)
@@ -24,6 +24,11 @@ double InstrumentsInfo::minPrice(const QString &symbol)
 double InstrumentsInfo::stepPrice(const QString &symbol)
 {
     return filters.price[symbol.toUtf8()].step;
+}
+
+int InstrumentsInfo::dap(const QString &symbol)
+{
+    return filters.price[symbol.toUtf8()].dap;
 }
 
 InstrumentsInfo::InstrumentsInfo()
