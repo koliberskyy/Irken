@@ -11,6 +11,21 @@ double InstrumentsInfo::maxLeverage(const QByteArray &symbol)
     return filters.leverage[symbol].max.toDouble();
 }
 
+double InstrumentsInfo::maxPrice(const QString &symbol)
+{
+    return filters.price[symbol.toUtf8()].max.toDouble();
+}
+
+double InstrumentsInfo::minPrice(const QString &symbol)
+{
+    return filters.price[symbol.toUtf8()].min.toDouble();
+}
+
+double InstrumentsInfo::stepPrice(const QString &symbol)
+{
+    return filters.price[symbol.toUtf8()].step;
+}
+
 InstrumentsInfo::InstrumentsInfo()
 {
     update_filters();

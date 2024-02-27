@@ -477,6 +477,33 @@ void Account::updateOrders()
 #endif
 }
 
+void Account::placeOrder(QJsonObject order)
+{
+    if(balance() > 10.0){
+        QEventLoop eventLoop;
+        QTimer timer;
+
+        QObject::connect(&timer, &QTimer::timeout, &eventLoop, &QEventLoop::quit);
+        QObject::connect(this, &Account::ordersUpdated, &eventLoop, &QEventLoop::quit);
+
+        updateOrders();
+
+        timer.start(10000);
+        eventLoop.exec();
+
+        auto exist = orders;
+        bool exist_trigger = false;
+
+        for(auto ex : exist){
+            if(ex["symbol"] == order["symbol"] && ex["price"].toString().toDouble() == order["price"].toString().toDouble()){
+                exist_trigger = true;
+            }
+        }
+        if(!exist_trigger)
+            Order::place(order, api(), secret(), Order::qty_to_post(balance(), order["price"].toString().toDouble(), order["qty"].toString().toDouble()));
+    }
+}
+
 void Account::replyFinished(QNetworkReply *reply)
 {
     auto url = reply->request().url();
@@ -494,9 +521,19 @@ void Account::replyFinished(QNetworkReply *reply)
     reply->deleteLater();
 }
 
+void Account::cancelOrder(QJsonObject order)
+{
+    Order::batch_cancel(QList<QJsonObject>{order}, api(), secret());
+}
+
 double Order::qty_to_post(double acc_balance, double price)
 {
     return settings::one_order_qty_pc_from_balance * acc_balance / (100 * price);
+}
+
+double Order::qty_to_post(double acc_balance, double price, double percent_from_balance)
+{
+    return percent_from_balance * acc_balance / (100 * price);
 }
 
 
@@ -678,6 +715,57 @@ void Order::place(const QJsonObject &order, const QString &api, const QString &s
     thr.detach();
 }
 
+void Order::place(const QJsonObject &order, const QString &api, const QString &secret, double qty)
+{
+    if(qty > 0){
+        auto obj = order;
+        obj["qty"] =  QString::fromUtf8(instruments::double_to_utf8(obj["symbol"].toString().toUtf8(), instruments::Filter_type::lotSize, qty));
+        obj.insert("category", "linear");
+        obj.insert("orderType", "Limit");
+
+
+        QEventLoop eventLoop;
+        QTimer timer;
+        QNetworkAccessManager mgr;
+
+        QObject::connect(&timer, &QTimer::timeout, &eventLoop, &QEventLoop::quit);
+        QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &eventLoop, SLOT(quit()));
+
+        auto data = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+
+        auto headers = Account::make_headers(data, api.toUtf8(), secret.toUtf8());
+        QUrl url("https://api.bybit.com/v5/order/create");
+
+        QNetworkRequest req(url);
+
+        for(auto &it : headers){
+            req.setRawHeader(it.first, it.second);
+        }
+
+        QNetworkReply *reply = mgr.post(req, data);
+
+        timer.start(10000);
+        eventLoop.exec();
+
+        if (reply->error() == QNetworkReply::NoError){
+            auto obj = QJsonDocument::fromJson(reply->readAll()).object();
+            auto retCode = obj["retCode"].toInt();
+            if(retCode == 0){
+                auto breakpoint = true;
+            }
+            else{
+                instruments::replyError(url, QJsonDocument(obj).toJson());
+            }
+        }
+        else {
+            //failure
+            instruments::replyError(url, data);
+        }
+        reply->deleteLater();
+
+    }
+}
+
 void Order::batch_place(const QList<QJsonObject> orders, const QString &api, const QString &secret, const double balance)
 {
     QList<QJsonObject> orders_copy;
@@ -792,7 +880,7 @@ void Order::batch_cancel(const QList<QJsonObject> orders, const QString &api, co
 
             if (reply->error() == QNetworkReply::NoError){
                 auto obj = QJsonDocument::fromJson(reply->readAll()).object();
-                auto retCode = obj["retCode"].toString().toInt();
+                auto retCode = obj["retCode"].toInt();
                 if(retCode == 0){
                     auto breakpoint = true;
                 }

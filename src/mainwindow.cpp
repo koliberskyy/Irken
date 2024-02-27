@@ -40,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     setMinimumSize(1280, 720);
     updateAccounts();
-    createConnctions();
 
     updateAccTree();
     updatePosTree(QJsonArray());
@@ -84,6 +83,8 @@ MainWindow::MainWindow(QWidget *parent)
     graphicWgt->setLayout(graphicGrid);
 
     toolBox->addItem(graphicWgt, "График");
+
+    createConnctions();
 
     setCentralWidget(toolBox);
 
@@ -250,7 +251,8 @@ void MainWindow::updateOrdTree(QJsonArray orders)
                 ss << std::put_time(&bt, "%H:%M:%S");
                 childList.append(QString::fromStdString(ss.str()));
 
-                childList.append(obj["orderLinkId"].toString());
+                childList.append(obj["orderId"].toString());
+                childList.append(accPtr->api());
 
 
                 auto isFinded = false;
@@ -349,6 +351,43 @@ void MainWindow::updateSmmTree(QJsonArray orders)
     }
 }
 
+void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    auto symbol = item->text(2);
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("My dialog"));
+    auto form = new QFormLayout();
+
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    form->addRow(new QLabel("Отменить ордер?"));
+    form->addRow(btn_box);
+    dlg.setLayout(form);
+
+    // В случае, если пользователь нажал "Ok".
+    if(dlg.exec() == QDialog::Accepted) {
+        QJsonObject order;
+        order.insert("symbol", item->text(2));
+
+        auto list = ordTree->findItems(item->text(4), Qt::MatchRecursive, 4);
+
+
+        for(auto it : accountList){
+            for(auto curr_item : list){
+            if(curr_item->text(curr_item->columnCount() - 1) == it->api()){
+                order["orderId"] = curr_item->text(ordTree->columnCount()-2);
+                it->cancelOrder(order);
+            }
+            }
+        }
+    }
+}
+
 void MainWindow::timerChanged()
 {
     auto current = QDateTime::currentDateTime();
@@ -366,25 +405,28 @@ void MainWindow::timerChanged()
     //update ord
     if(ordUpdateTime->secsTo(current) > *ordUpdateFluencySec){
         for(auto &it : accountList){
+            it->updateBalance();
             it->updateOrders();
         }
         ordUpdateTime->setDate(current.date());
         ordUpdateTime->setTime(current.time());
     }
     //smartmoney update
-    if(smmUpdateTime->secsTo(current) > *smmUpdateFluencySec || smartMoney->firstRun()){
-        if(smartMoney->isUpdateFinished)
-            smartMoney->updateSmartMoney(6);
+//    if(smmUpdateTime->secsTo(current) > *smmUpdateFluencySec || smartMoney->firstRun()){
+//        if(smartMoney->isUpdateFinished)
+//            smartMoney->updateSmartMoney(6);
 
-        smmUpdateTime->setDate(current.date());
-        smmUpdateTime->setTime(current.time());
-    }
+//        smmUpdateTime->setDate(current.date());
+//        smmUpdateTime->setTime(current.time());
+//    }
 }
 
 void MainWindow::graphicControlComboChanged()
 {
     candlestickWidget->updateKlines(symbolComboBox->currentText(), timeframeComboBox->currentText());
 }
+
+
 
 
 void MainWindow::updateAccounts()
@@ -407,10 +449,15 @@ void MainWindow::createConnctions()
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
         connect(it, SIGNAL(positionsUpdated(QJsonArray)), this, SLOT(updatePosTree(QJsonArray)));
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
+        connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject)), it, SLOT(placeOrder(QJsonObject)));
+
     }
     connect(smartMoney, SIGNAL(updated(QJsonArray)), this, SLOT(updateSmmTree(QJsonArray)));
 
+    connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));
+
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
+
 
 }
 

@@ -373,16 +373,29 @@ void CandleStickWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
         chart->zoomReset();
     }
+    QChartView::mouseDoubleClickEvent(event);
+
 }
 
 void CandleStickWidget::klineClicked(QCandlestickSet *set)
 {
     if(hightsAddModeActivated){
+        if(ctrlButtonPressed){
+            addTakeProfit(set->high(), set->timestamp());
+        }
+        else{
         addHigh(set->high(), set->timestamp());
+        }
+
     }
 
     if(lowsAddModeActivated){
-        addLow(set->low(), set->timestamp());
+        if(ctrlButtonPressed){
+            addTakeProfit(set->low(), set->timestamp());
+        }
+        else{
+            addLow(set->low(), set->timestamp());
+        }
     }
 
     if(areaAddModeActivated){
@@ -469,12 +482,113 @@ void CandleStickWidget::areaClicked()
             area++;
         }
         if(area != areas[currentSymbol].end()){
+            area->removeFromChart(chart);
             areas[currentSymbol].erase(area);
         }
 
-        area->removeFromChart(chart);
     }
 
+}
+
+void CandleStickWidget::areaDoubleClicked()
+{
+    auto snd = (QAreaSeries*)sender();
+    if(snd != nullptr){
+        auto area = findArea(snd);
+
+        QDialog dlg(this);
+        dlg.setWindowTitle(tr("My dialog"));
+
+        auto *form = new QFormLayout();
+        //dsb_price
+        auto dsb_price = new QDoubleSpinBox();
+        dsb_price->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+        dsb_price->setSingleStep(instruments::stepPrice(currentSymbol));
+        if(area->isBuyArea){
+            dsb_price->setValue(area->_07());
+        }
+        else{
+            dsb_price->setValue(area->_03());
+        }
+
+        //dsb_tp
+        auto dsb_tp = new QDoubleSpinBox();
+        dsb_tp->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+        dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
+        if(takeProfit.series != nullptr){
+            dsb_tp->setValue(takeProfit.count);
+        }
+
+        //dsb_sl
+        auto dsb_sl = new QDoubleSpinBox();
+        dsb_sl->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+        dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
+        dsb_sl->setValue(area->_stop());
+
+        //sb_qty
+        auto sb_qty = new QSpinBox();
+        sb_qty->setRange(0, 100);
+        sb_qty->setValue(sb_qty->maximum() / 20);
+        sb_qty->setSingleStep(1);
+
+        //sld_qty
+        auto sld_qty = new QSlider(Qt::Horizontal);
+        sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
+        sld_qty->setValue(sb_qty->value());
+        QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
+        QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
+
+        //buySellComboBox
+        auto buySellComboBox = new QComboBox();
+        buySellComboBox->addItem("Buy");
+        buySellComboBox->addItem("Sell");
+        if(area->isBuyArea){
+            buySellComboBox->setCurrentIndex(0);
+        }
+        else{
+            buySellComboBox->setCurrentIndex(1);
+        }
+
+
+        QDialogButtonBox *btn_box = new QDialogButtonBox();
+        btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+        connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+        form->addRow(new QLabel("Side"), buySellComboBox);
+        form->addRow(new QLabel("ТВХ"), dsb_price);
+        form->addRow(new QLabel("ТП"), dsb_tp);
+        form->addRow(new QLabel("СЛ"), dsb_sl);
+        form->addRow(new QLabel("%"), sb_qty);
+        form->addRow(sld_qty);
+        form->addRow(btn_box);
+
+        dlg.setLayout(form);
+
+        // В случае, если пользователь нажал "Ok".
+        if(dlg.exec() == QDialog::Accepted) {
+            QJsonObject order;
+            order.insert("symbol", currentSymbol);
+            order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_price->value())));
+            order.insert("side", buySellComboBox->currentText());
+            order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
+            order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
+            order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
+            emit addOrderClicked(order);
+        }
+    }
+}
+
+const AbstractArea *CandleStickWidget::findArea(QAreaSeries *series)
+{
+    for(auto it = areas[currentSymbol].begin(); it != areas[currentSymbol].end(); it++){
+        if(it->series == series){
+            return &(*it);
+        }
+    }
+
+    return nullptr;
 }
 
 
@@ -748,7 +862,33 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     area.attachAxis(axisX, axisY);
 
     areas[currentSymbol].append(area);
+    QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
 
+
+}
+
+void CandleStickWidget::addTakeProfit(qreal price, qreal beginTimeStamp)
+{
+    if(takeProfit.series != nullptr){
+        chart->removeSeries(takeProfit.series);
+        takeProfit.clear();
+    }
+    auto lineSeries = new QLineSeries();
+
+
+    lineSeries->append(beginTimeStamp, price);
+    lineSeries->append(klinesSeries->sets().last()->timestamp(), price);
+
+    chart->addSeries(lineSeries);
+
+    lineSeries->setColor(QColor(0, 255, 0));
+    lineSeries->attachAxis(axisX);
+    lineSeries->attachAxis(axisY);
+
+    lineSeries->setVisible(true);
+
+    takeProfit.series = lineSeries;
+    takeProfit.count = price;
 }
 
 void CandleStickWidget::delLiquid(qreal liquid)

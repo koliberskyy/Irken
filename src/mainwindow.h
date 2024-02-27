@@ -32,6 +32,7 @@ public slots:
     void updatePosTree(QJsonArray positions);
     void updateOrdTree(QJsonArray orders);
     void updateSmmTree(QJsonArray orders);
+    void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
 private slots:
     void timerChanged();
     void graphicControlComboChanged();

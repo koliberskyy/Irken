@@ -156,6 +156,10 @@ class InstrumentsInfo
 public:
     static double trading_leverage(const QByteArray &symbol);
     double maxLeverage(const QByteArray &symbol);
+    double maxPrice(const QString &symbol);
+    double minPrice(const QString &symbol);
+    double stepPrice(const QString &symbol);
+
     explicit InstrumentsInfo();
     void update_filters();
 
@@ -185,6 +189,28 @@ inline double tradingLeverage(const QByteArray &symbol){
         ii = std::make_unique<InstrumentsInfo>();
     }
     return InstrumentsInfo::trading_leverage(symbol);
+}
+
+inline double maxPrice(const QString &symbol){
+    if (ii == nullptr){
+        ii = std::make_unique<InstrumentsInfo>();
+    }
+
+    return ii->maxPrice(symbol);
+}
+inline double minPrice(const QString &symbol){
+    if (ii == nullptr){
+        ii = std::make_unique<InstrumentsInfo>();
+    }
+
+    return ii->minPrice(symbol);
+}
+inline double stepPrice(const QString &symbol){
+    if (ii == nullptr){
+        ii = std::make_unique<InstrumentsInfo>();
+    }
+
+    return ii->stepPrice(symbol);
 }
 
 }//namespace instrumetntinfo

@@ -21,24 +21,31 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QDialog>
+#include <QLabel>
+#include <QSlider>
+#include <QDoubleSpinBox>
 #include <QComboBox>
 #include <QToolTip>
 #include <unordered_map>
 #include "smartmoney.h"
 
 struct AbstractLiquid{
-    QLineSeries *series;
+    QLineSeries *series{nullptr};
     qreal count;
     qreal timestamp;
     qreal endtimestamp;
     virtual bool isFarther(AbstractLiquid*) = 0;
     void set(QLineSeries* s, qreal c, qreal t, qreal et){series = s; count = c; timestamp = t; endtimestamp = et;}
+    void clear(){series = nullptr; count = 0; timestamp = 0; endtimestamp = 0;}
 };
 struct HighLiquid : public AbstractLiquid{
     virtual bool isFarther(AbstractLiquid* other)override{ return count > other->count;}
 };
 struct LowLiquid : public AbstractLiquid{
     virtual bool isFarther(AbstractLiquid* other)override{ return count < other->count;}
+};
+struct TakeProfit : public AbstractLiquid{
+    virtual bool isFarther(AbstractLiquid* other)override{ return false;}
 };
 struct AbstractArea{
     QAreaSeries *series;
@@ -56,14 +63,14 @@ struct AbstractArea{
 
     static constexpr qreal stopStep{0.005};
 
-    qreal particional(qreal count){return (high-low)*count + low;}
-    qreal _07(){return particional(0.7); }
-    qreal _05(){return particional(0.5);}
-    qreal _03(){return particional(0.3);}
+    qreal particional(qreal count)const{return (high-low)*count + low;}
+    qreal _07()const{return particional(0.7); }
+    qreal _05()const{return particional(0.5);}
+    qreal _03()const{return particional(0.3);}
 
-    qreal priceFromRange(qreal price, qreal range){return price * range;}
+    qreal priceFromRange(qreal price, qreal range)const{return price * range;}
 
-    qreal _stop(){if(isBuyArea) return priceFromRange(low, 1 - stopStep); else return priceFromRange(high, 1+stopStep);}
+    qreal _stop()const{if(isBuyArea) return priceFromRange(low, 1 - stopStep); else return priceFromRange(high, 1+stopStep);}
     void attachAxis(QAbstractAxis* axisX, QAbstractAxis* axisY){
         series->attachAxis(axisX);
         series->attachAxis(axisY);
@@ -100,6 +107,8 @@ class CandleStickWidget : public QChartView
     Q_OBJECT
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
+signals:
+    void addOrderClicked(QJsonObject order);
 public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
     void autoDrawLiquidities();
@@ -118,6 +127,8 @@ protected:
 private slots:
     void klineClicked(QCandlestickSet *set);
     void areaClicked();
+    void areaDoubleClicked();
+
 private:
     QChart *chart {nullptr};
     QPoint m_oPrePos;
@@ -130,6 +141,8 @@ private:
     std::unordered_map<QString, QList<HighLiquid>> hightsList;
     std::unordered_map<QString, QList<LowLiquid>> lowsList;
     std::unordered_map<QString, QList<AbstractArea>> areas;
+    TakeProfit takeProfit;
+    const AbstractArea* findArea(QAreaSeries *series);
 
     QAbstractAxis *axisX;
     QAbstractAxis *axisY;
@@ -149,6 +162,7 @@ private:
     void addLow(qreal low, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1);
+    void addTakeProfit(qreal price, qreal beginTimeStamp);
     void delLiquid(qreal liquid);
 
     void addExistSerieses();

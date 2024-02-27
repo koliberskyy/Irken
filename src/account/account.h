@@ -48,9 +48,12 @@ class Order{
 public:
     virtual void foo() = 0;
     static void place(const QJsonObject &order, const QString &api, const QString &secret);
+    static void place(const QJsonObject &order, const QString &api, const QString &secret, double qty);
     static void batch_place(const QList<QJsonObject> orders, const QString &api, const QString &secret, const double balance);
     static void batch_cancel(const QList<QJsonObject> orders, const QString &api, const QString &secret);
     static double qty_to_post(double acc_balance, double price);
+    static double qty_to_post(double acc_balance, double price, double percent_from_balance);
+
 
 };
 
@@ -77,16 +80,17 @@ public:
     std::vector<std::function<int(std::vector<reducePair> table, const QJsonObject &pos)>> vec_positionControlLambdas;
     //orders
     void refreshOrderList(const QList<QJsonObject> &ordersToPost);
+    double getBalance()const {return data["balance"].toString().toDouble();}
+    QByteArray api() const;
+
+
 public slots:
     void updateBalance();
     void updatePositions();
     void updateOrders();
-
+    void placeOrder(QJsonObject order);
     void replyFinished(QNetworkReply *reply);
-
-    double getBalance()const {return data["balance"].toString().toDouble();}
-
-
+    void cancelOrder(QJsonObject order);
 
 
 signals:
@@ -95,7 +99,6 @@ signals:
     void ordersUpdated(QJsonArray);
 
 private:
-    QByteArray api() const;
     QByteArray secret() const;
     double balance()const;
     QNetworkAccessManager *netManager;
