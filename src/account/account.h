@@ -47,8 +47,8 @@ public:
 class Order{
 public:
     virtual void foo() = 0;
-    static void place(const QJsonObject &order, const QString &api, const QString &secret);
-    static void place(const QJsonObject &order, const QString &api, const QString &secret, double qty);
+    static bool place(const QJsonObject &order, const QString &api, const QString &secret);
+    static bool place(const QJsonObject &order, const QString &api, const QString &secret, double qty);
     static void batch_place(const QList<QJsonObject> orders, const QString &api, const QString &secret, const double balance);
     static void batch_cancel(const QList<QJsonObject> orders, const QString &api, const QString &secret);
     static double qty_to_post(double acc_balance, double price);

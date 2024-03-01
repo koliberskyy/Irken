@@ -88,6 +88,8 @@ public:
     принимает ОДНУ свечу!!!!!!!
     */
     static QCandlestickSet *toQCandlestickSetPtr(const QJsonArray &kline);
+    static QCandlestickSet toQCandlestickSet(const QJsonArray &kline);
+
 
     static long long    time    (const QJsonArray &kline)   {return kline[0].toString().toLongLong(); }
     static double       open    (const QJsonArray &kline)   {return kline[1].toString().toDouble(); }

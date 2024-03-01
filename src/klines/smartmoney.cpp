@@ -537,6 +537,7 @@ QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval
         };
 
     auto obj = requests::get(url, query, "klines-" + symbol + "-" + interval, 10000, customReplyParser);
+
     if(!obj.isEmpty()){
         auto result = obj["result"].toObject();
         auto list = result["list"].toArray();
@@ -552,6 +553,11 @@ QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval
 QCandlestickSet *Klines::toQCandlestickSetPtr(const QJsonArray &kline)
 {
     return new QCandlestickSet(open(kline), high(kline), low(kline), close(kline), time(kline));
+}
+
+QCandlestickSet Klines::toQCandlestickSet(const QJsonArray &kline)
+{
+    return QCandlestickSet(open(kline), high(kline), low(kline), close(kline), time(kline));
 }
 
 std::unordered_map<QString, QJsonArray> SmartMoney::downloadKlinesPackage(const QString &interval, const QString &limit, std::vector<QByteArray>::const_iterator begin, std::vector<QByteArray>::const_iterator end, const QString &timeBegin, const QString &timeEnd)

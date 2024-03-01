@@ -10,14 +10,14 @@ Account::Account(QJsonObject &&acc_json, QObject *parent)
     //************** ПЛЕЧИ
     //setLeverage();
 
-    reduceTable.emplace_back(reducePair{10, 0, 0});
-    reduceTable.emplace_back(reducePair{15, 5, 25.0});
-    reduceTable.emplace_back(reducePair{25, 15, 25.0});
-    reduceTable.emplace_back(reducePair{35, 25, 25.0});
-    reduceTable.emplace_back(reducePair{45, 35, 25.0});
+    reduceTable.emplace_back(reducePair{20, 0, 25});
+    reduceTable.emplace_back(reducePair{40, 5, 50});
+    reduceTable.emplace_back(reducePair{200005, 15, 25.0});
+    //reduceTable.emplace_back(reducePair{35, 25, 25.0});
+    //reduceTable.emplace_back(reducePair{45, 35, 25.0});
 
     vec_positionControlLambdas.push_back([](std::vector<reducePair> table, const QJsonObject &pos)->int{
-        auto isLongPos = pos["side"] == "Buy";
+        auto isLongPos = pos["side"].toString() == "Buy";
         auto sl = pos["stopLoss"].toString().toDouble();
         auto pnl = Position::unrealizedPnlPercent(pos);
         auto avg = pos["avgPrice"].toString().toDouble();
@@ -33,7 +33,7 @@ Account::Account(QJsonObject &&acc_json, QObject *parent)
         return -1;});
 
     vec_positionControlLambdas.push_back([](std::vector<reducePair> table, const QJsonObject &pos)->int{
-        auto isLongPos = pos["side"] == "Buy";
+        auto isLongPos = pos["side"].toString() == "Buy";
         auto sl = pos["stopLoss"].toString().toDouble();
         auto pnl = Position::unrealizedPnlPercent(pos);
         auto avg = pos["avgPrice"].toString().toDouble();
@@ -43,7 +43,7 @@ Account::Account(QJsonObject &&acc_json, QObject *parent)
         return -1;});
 
     vec_positionControlLambdas.push_back([](std::vector<reducePair> table, const QJsonObject &pos)->int{
-        auto isLongPos = pos["side"] == "Buy";
+        auto isLongPos = pos["side"].toString() == "Buy";
         auto sl = pos["stopLoss"].toString().toDouble();
         auto pnl = Position::unrealizedPnlPercent(pos);
         auto avg = pos["avgPrice"].toString().toDouble();
@@ -115,7 +115,8 @@ void Account::moveStopAndReduse(QJsonObject &&pos)
     }
 
     if (reduceIndex == 0){
-        Position::setTradingStop(pos, api(), secret(), avgPrice, takeProfit);
+        if(Position::setTradingStop(pos, api(), secret(), avgPrice, takeProfit))
+            Position::reducePosition(pos, reduceTable.at(reduceIndex).reducePercent, api(), secret());
     }
     else if(reduceIndex > 0){
         QString updatedStop = instruments::double_to_utf8(pos["symbol"].toString().toUtf8(), instruments::Filter_type::price, Position::markPriceFromPnl(pos, reduceTable.at(reduceIndex).stopPnl));
@@ -218,7 +219,7 @@ bool Position::setTradingStop(const QJsonObject &pos, const QString &api, const 
 
     if (reply->error() == QNetworkReply::NoError){
         auto obj = QJsonDocument::fromJson(reply->readAll()).object();
-        auto retCode = obj["retCode"].toString().toInt();
+        auto retCode = obj["retCode"].toInt();
         if(retCode == 0){
             reply->deleteLater();
             return true;
@@ -242,7 +243,7 @@ void Position::reducePosition(const QJsonObject &pos, double reducePercent, cons
         order.insert("category", "linear");
         order.insert("symbol", pos["symbol"]);
         //side
-        auto side = [pos]()->QString{if(pos["side"] == "Buy")return "Sell";else return "Buy";}();
+        auto side = [pos]()->QString{if(pos["side"].toString() == "Buy")return "Sell";else return "Buy";}();
         order.insert("side", side);
 
         order.insert("orderType", "Market");
@@ -255,8 +256,10 @@ void Position::reducePosition(const QJsonObject &pos, double reducePercent, cons
 
         order.insert("reduceOnly", true);
 
-
-        Order::place(order, api, secret);
+        auto trigger = false;
+        do{
+        trigger = Order::place(order, api, secret);
+        }while(!trigger);
     }
 }
 
@@ -679,44 +682,48 @@ QByteArray Account::timestamp()
 }
 
 
-void Order::place(const QJsonObject &order, const QString &api, const QString &secret)
+bool Order::place(const QJsonObject &order, const QString &api, const QString &secret)
 {
-    std::thread thr([order, api, secret](){
-        QEventLoop eventLoop;
-        QNetworkAccessManager mgr;
-        QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &eventLoop, SLOT(quit()));
+    QEventLoop eventLoop;
+    QNetworkAccessManager mgr;
+    QTimer timer;
 
-        auto data = QJsonDocument(order).toJson(QJsonDocument::Compact);
-        auto headers = Account::make_headers(data, api.toUtf8(), secret.toUtf8());
-        QUrl url("https://api.bybit.com/v5/order/create?");
+    QObject::connect(&timer, &QTimer::timeout, &eventLoop, &QEventLoop::quit);
+    QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &eventLoop, SLOT(quit()));
 
-        QNetworkRequest req(url);
+    auto data = QJsonDocument(order).toJson(QJsonDocument::Compact);
+    auto headers = Account::make_headers(data, api.toUtf8(), secret.toUtf8());
+    QUrl url("https://api.bybit.com/v5/order/create?");
 
-        for(auto &it : headers){
-            req.setRawHeader(it.first, it.second);
+    QNetworkRequest req(url);
+
+    for(auto &it : headers){
+        req.setRawHeader(it.first, it.second);
+    }
+
+    QNetworkReply *reply = mgr.post(req, data);
+    timer.start(10000);
+    eventLoop.exec();
+
+    if (reply->error() == QNetworkReply::NoError) {
+        auto obj = QJsonDocument::fromJson(reply->readAll()).object();
+        auto retCode = obj["retCode"].toInt();
+        if(retCode != 0){
+            qDebug() << "Failure: request - " << url << "\ndata:" << QJsonDocument::fromJson(data).toJson(QJsonDocument::Indented) << "\nreply:\n" <<  QJsonDocument(obj).toJson();
+            reply->deleteLater();
+            return true;
         }
+    }
+    else {
+        //failure
+        qDebug() << "Failure" << QJsonDocument::fromJson(reply->readAll()).toJson();
+    }
+    reply->deleteLater();
+    return false;
 
-        QNetworkReply *reply = mgr.post(req, data);
-        eventLoop.exec();
-
-        if (reply->error() == QNetworkReply::NoError) {
-            auto obj = QJsonDocument::fromJson(reply->readAll()).object();
-            auto retCode = obj["retCode"].toString().toInt();
-            if(retCode != 0){
-                qDebug() << "Failure: request - " << url << "\ndata:" << QJsonDocument::fromJson(data).toJson(QJsonDocument::Indented) << "\nreply:\n" <<  QJsonDocument(obj).toJson();
-            }
-        }
-        else {
-            //failure
-            qDebug() << "Failure" << QJsonDocument::fromJson(reply->readAll()).toJson();
-        }
-        reply->deleteLater();
-    });
-
-    thr.detach();
 }
 
-void Order::place(const QJsonObject &order, const QString &api, const QString &secret, double qty)
+bool Order::place(const QJsonObject &order, const QString &api, const QString &secret, double qty)
 {
     if(qty > 0){
         auto obj = order;
@@ -752,19 +759,26 @@ void Order::place(const QJsonObject &order, const QString &api, const QString &s
             auto obj = QJsonDocument::fromJson(reply->readAll()).object();
             auto retCode = obj["retCode"].toInt();
             if(retCode == 0){
-                auto breakpoint = true;
+                reply->deleteLater();
+                return true;
             }
             else{
                 instruments::replyError(url, QJsonDocument(obj).toJson());
+                std::cout << "data:\n" << QJsonDocument::fromJson(data).toJson().toStdString() << '\n';
             }
         }
         else {
             //failure
-            instruments::replyError(url, data);
+            instruments::replyError(url, QJsonDocument(obj).toJson());
+            std::cout << "data:\n" << QJsonDocument::fromJson(data).toJson().toStdString() << '\n';
         }
         reply->deleteLater();
-
+        return false;
     }
+    else{
+        std::cout << "place order qty < 0\n";
+    }
+    return true;
 }
 
 void Order::batch_place(const QList<QJsonObject> orders, const QString &api, const QString &secret, const double balance)
@@ -812,7 +826,7 @@ void Order::batch_place(const QList<QJsonObject> orders, const QString &api, con
 
                 if (reply->error() == QNetworkReply::NoError){
                     auto obj = QJsonDocument::fromJson(reply->readAll()).object();
-                    auto retCode = obj["retCode"].toString().toInt();
+                    auto retCode = obj["retCode"].toInt();
                     if(retCode == 0){
                         auto breakpoint = true;
                     }

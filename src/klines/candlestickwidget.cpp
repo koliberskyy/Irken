@@ -484,8 +484,12 @@ void CandleStickWidget::areaClicked()
         if(area != areas[currentSymbol].end()){
             area->removeFromChart(chart);
             areas[currentSymbol].erase(area);
+            for(auto area : areas[currentSymbol]){
+                QObject::disconnect(area.series, SIGNAL(clicked(const QPointF)), this, SLOT(areaClicked()));
+            }
+            deactivateAllMods();
+            this->setCursor(Qt::ArrowCursor);
         }
-
     }
 
 }
@@ -639,23 +643,60 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));
 
         klinesSeries->setUseOpenGL(true);
-        klinesSeries->setName("Acme Ltd");
         klinesSeries->setIncreasingColor(QColor(Qt::green));
         klinesSeries->setDecreasingColor(QColor(Qt::red));
 
         QJsonArray klines;
 
-        while(klines.isEmpty())
-                klines = Klines::downloadKlines(symbol, interval, limit);
+        if(limit.toInt() <= 1000){
+            while(klines.isEmpty())
+                    klines = Klines::downloadKlines(symbol, interval, limit);
 
-        int i = klines.size()-1;
-        while (i > (-1) ){
-            auto set = Klines::toQCandlestickSetPtr(klines.at(i).toArray());
-            if (set) {
-                klinesSeries->append(set);
+            int i = klines.size()-1;
+            while (i > (-1) ){
+                auto set = Klines::toQCandlestickSetPtr(klines.at(i).toArray());
+                if (set) {
+                    klinesSeries->append(set);
+                }
+                i--;
             }
-            i--;
         }
+        else{
+            QJsonArray tmp;
+            auto i_limit = limit.toInt() - 1000;
+
+            while(tmp.isEmpty())
+                    tmp = Klines::downloadKlines(symbol, interval, "1000");
+
+            auto timeBegin = Klines::toQCandlestickSet(tmp.last().toArray()).timestamp();
+            auto timeEnd = Klines::toQCandlestickSet(tmp.begin()->toArray()).timestamp();
+            klines.append(tmp);
+
+            while(i_limit > 0){
+                QJsonArray tmpppppppppppppp;
+                while(tmpppppppppppppp.isEmpty()){
+                    tmpppppppppppppp = Klines::downloadKlines(symbol, interval, "1000", QString::fromStdString(std::to_string(timeBegin - 2*(timeEnd - timeBegin))), QString::fromStdString(std::to_string(timeBegin)));
+                }
+                timeBegin = Klines::toQCandlestickSet(tmpppppppppppppp.last().toArray()).timestamp();
+                timeEnd = Klines::toQCandlestickSet(tmpppppppppppppp.begin()->toArray()).timestamp();
+                i_limit -= 1000;
+                klines.push_back(tmp);
+            }
+            for(auto it:klines){
+                auto arr = it.toArray();
+                int i = arr.size() -1;
+                while (i > (-1) ){
+                    auto set = Klines::toQCandlestickSetPtr(arr.at(i).toArray());
+                    if (set) {
+                        klinesSeries->append(set);
+                    }
+                    i--;
+                }
+
+            }
+
+        }
+
 
         chart->addSeries(klinesSeries);
         chart->legend()->hide();
