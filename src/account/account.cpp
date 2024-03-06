@@ -709,10 +709,13 @@ bool Order::place(const QJsonObject &order, const QString &api, const QString &s
         auto obj = QJsonDocument::fromJson(reply->readAll()).object();
         auto retCode = obj["retCode"].toInt();
         if(retCode != 0){
-            qDebug() << "Failure: request - " << url << "\ndata:" << QJsonDocument::fromJson(data).toJson(QJsonDocument::Indented) << "\nreply:\n" <<  QJsonDocument(obj).toJson();
+            std::cout << "Failure: request - " << url.toString().toStdString() << "\ndata:" << QJsonDocument::fromJson(data).toJson().toStdString() << "\nreply:\n" <<  QJsonDocument(obj).toJson().toStdString();
+        }
+        else{
             reply->deleteLater();
             return true;
         }
+
     }
     else {
         //failure

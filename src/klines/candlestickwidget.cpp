@@ -3,12 +3,14 @@
 CandleStickWidget::CandleStickWidget(QWidget *parent)
     : QChartView{parent}
 {
-    setKlines("BTCUSDT", "W", "1000");
+    updateKlines("BTCUSDT", "W", "1000");
 }
 
 void CandleStickWidget::updateKlines(const QString &symbol, const QString &interval, const QString &limit)
 {
+    klinesUpdated = false;
     setKlines(symbol, interval, limit);
+    klinesUpdated = true;
 }
 
 void CandleStickWidget::autoDrawLiquidities()
@@ -587,6 +589,29 @@ void CandleStickWidget::areaDoubleClicked()
     }
 }
 
+void CandleStickWidget::updateCurrentChart()
+{
+    if(!klinesSeries->sets().isEmpty() && klinesUpdated){
+        auto do_nothing = true;
+        QJsonArray klines;
+        while(klines.isEmpty())
+                klines = Klines::downloadKlines(currentSymbol, currentTimeframe, "1");
+
+        auto set = Klines::toQCandlestickSetPtr(klines.begin()->toArray());
+
+        if(set->timestamp() == klinesSeries->sets().back()->timestamp() && klinesUpdated){
+            klinesSeries->remove(klinesSeries->sets().back());
+            klinesSeries->append(set);
+
+        }
+        else if(klinesUpdated){
+            klinesSeries->append(set);
+        }
+
+
+    }
+}
+
 const AbstractArea *CandleStickWidget::findArea(QAreaSeries *series)
 {
     for(auto it = areas[currentSymbol].begin(); it != areas[currentSymbol].end(); it++){
@@ -713,6 +738,7 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         setChart(chart);
     }
     else{
+        currentTimeframe = interval;
         chart->zoomReset();
         klinesSeries->clear();
         QJsonArray klines;

@@ -8,9 +8,11 @@ MainWindow::MainWindow(QWidget *parent)
       ordUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       smmUpdateTime(new QDateTime(QDateTime::currentDateTime())),
+      chartUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateFluencySec(new qint64(3)),
       ordUpdateFluencySec(new qint64(10)),
       smmUpdateFluencySec(new qint64(300)),
+      chartUpdateFluencySec(new qint64(3)),
       accTree(new QTreeWidget()),
       posTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
@@ -93,6 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+
 }
 
 void MainWindow::updateAccTree()
@@ -411,6 +414,13 @@ void MainWindow::timerChanged()
         ordUpdateTime->setDate(current.date());
         ordUpdateTime->setTime(current.time());
     }
+
+    if(chartUpdateTime->secsTo(current) > *chartUpdateFluencySec){
+        candlestickWidget->updateCurrentChart();
+        chartUpdateTime->setDate(current.date());
+        chartUpdateTime->setTime(current.time());
+    }
+
     //smartmoney update
 //    if(smmUpdateTime->secsTo(current) > *smmUpdateFluencySec || smartMoney->firstRun()){
 //        if(smartMoney->isUpdateFinished)

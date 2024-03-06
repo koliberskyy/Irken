@@ -513,7 +513,7 @@ QList<QJsonObject> SmartMoney::updateOrders(const QJsonArray &klines, const QStr
 
 QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
 {
-    QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=1000");
+    QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=" +limit.toUtf8());
 
     if(!begin.isEmpty() && !end.isEmpty())
         query.append("&start=" + begin.toUtf8() + "&end=" + end.toUtf8());

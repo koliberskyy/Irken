@@ -61,7 +61,7 @@ struct AbstractArea{
     qreal endtimestamp;
     bool isBuyArea;
 
-    static constexpr qreal stopStep{0.005};
+    static constexpr qreal stopStep{0.0001};
 
     qreal particional(qreal count)const{return (high-low)*count + low;}
     qreal _07()const{return particional(0.7); }
@@ -113,6 +113,8 @@ public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
     void autoDrawLiquidities();
     void autoDrawAreas();
+    void updateCurrentChart();
+
 
 protected:
 
@@ -134,6 +136,7 @@ private:
     QPoint m_oPrePos;
     bool m_bLeftButtonPressed{false};
     bool ctrlButtonPressed{false};
+    bool klinesUpdated{false};
     QCandlestickSeries *klinesSeries {nullptr};
 
     QString currentSymbol;

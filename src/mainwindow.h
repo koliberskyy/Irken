@@ -51,10 +51,13 @@ private:
     std::unique_ptr<QDateTime> posUpdateTime;
     std::unique_ptr<QDateTime> ordUpdateTime;
     std::unique_ptr<QDateTime> smmUpdateTime;
+    std::unique_ptr<QDateTime> chartUpdateTime;
+
 
     std::unique_ptr<qint64> posUpdateFluencySec;
     std::unique_ptr<qint64> ordUpdateFluencySec;
     std::unique_ptr<qint64> smmUpdateFluencySec;
+    std::unique_ptr<qint64> chartUpdateFluencySec;
 
     QTreeWidget *accTree;
     QTreeWidget *posTree;
