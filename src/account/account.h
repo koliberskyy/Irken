@@ -88,7 +88,7 @@ public:
 
 public slots:
     void updateBalance();
-    void updatePositions();
+    void updatePositions(bool autocontrol = true);
     void updateOrders();
     void placeOrder(QJsonObject order);
     void replyFinished(QNetworkReply *reply);
@@ -106,6 +106,8 @@ signals:
     void ordersUpdated(QJsonArray);
 
 private:
+    bool autoControlActivated{false};
+
     QByteArray secret() const;
     double balance()const;
     QNetworkAccessManager *netManager;

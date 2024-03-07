@@ -360,7 +360,7 @@ void Account::updateBalance()
 
 }
 
-void Account::updatePositions()
+void Account::updatePositions(bool autocontrol)
 {
 #ifdef LEGACY
     std::thread thr([this](){
@@ -411,6 +411,8 @@ void Account::updatePositions()
     thr.detach();
 #endif
 #ifndef LEGACY
+    autoControlActivated = autocontrol;
+
     QByteArray query("category=linear&settleCoin=USDT");
     auto headers = make_headers(query, api(), secret());
     QUrl url("https://api.bybit.com/v5/position/list?" + std::move(query));
@@ -578,7 +580,7 @@ void Account::posDownloaded(const QJsonObject &obj)
 {
     auto arr = obj["result"].toObject()["list"].toArray();
 
-    if(!arr.isEmpty()){
+    if(!arr.isEmpty() && autoControlActivated){
         for (auto it : arr){
             moveStopAndReduse(it.toObject());
         }

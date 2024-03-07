@@ -74,11 +74,16 @@ MainWindow::MainWindow(QWidget *parent)
     smartMoneyButton = new QPushButton("Зоны");
     QObject::connect(smartMoneyButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawAreas);
 
+    autocontrolcheckbox = new QCheckBox("Автоконтроль");
+    autocontrolcheckbox->setChecked(false);
+
     auto graphicGrid = new QGridLayout();
     graphicGrid->addWidget(symbolComboBox, 0, 1, Qt::AlignCenter);
     graphicGrid->addWidget(timeframeComboBox, 1, 1, Qt::AlignCenter);
     graphicGrid->addWidget(liquidityButton, 2, 1, Qt::AlignCenter);
     graphicGrid->addWidget(smartMoneyButton, 3, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(autocontrolcheckbox, 4, 1, Qt::AlignCenter);
+
     graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
 
     auto graphicWgt = new QWidget();
@@ -528,7 +533,7 @@ void MainWindow::timerChanged()
     //update pos
     if(posUpdateTime->secsTo(current) > *posUpdateFluencySec && positionControlActivated){
         for(auto &it : accountList){
-            it->updatePositions();
+            it->updatePositions(autocontrolcheckbox->isChecked());
         }
         posUpdateTime->setDate(current.date());
         posUpdateTime->setTime(current.time());

@@ -77,6 +77,7 @@ private:
 
     QPushButton *liquidityButton;
     QPushButton *smartMoneyButton;
+    QCheckBox *autocontrolcheckbox;
 
     void updateAccounts();
     void createConnctions();
