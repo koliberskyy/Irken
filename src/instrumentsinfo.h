@@ -82,6 +82,7 @@ const std::vector<QByteArray> intervals = {
 const std::vector<QByteArray> timeframes = {
     "W",
     "D",
+    "720",
     "360",
     "240",
     "180",
@@ -89,7 +90,9 @@ const std::vector<QByteArray> timeframes = {
     "60",
     "30",
     "15",
-    "5"
+    "5",
+    "3",
+    "1"
 };
 
 

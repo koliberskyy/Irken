@@ -157,9 +157,9 @@ void CandleStickWidget::autoDrawAreas()
             //middle = (*prev)->high() + voidImbalance/2;
             middle = (*curr)->open() + body/2;
 
-//            if(voidImbalance > size_prev && middle < (*next)->low()
-//            || voidImbalance > size_next && middle > (*prev)->high()){
-            if(voidImbalance > size_prev && middle < (*next)->low()){
+            if(voidImbalance > size_prev /*&& middle < (*next)->low()*/
+            || voidImbalance > size_next /*&& middle > (*prev)->high()*/){
+            //if(voidImbalance > size_prev && middle < (*next)->low()){
 
                 AbstractArea imba;
                 imba.isBuyArea = isBuyArea;
@@ -178,9 +178,9 @@ void CandleStickWidget::autoDrawAreas()
             //middle = (*next)->low() + voidImbalance/2;
             middle = (*curr)->close() + body/2;
 
-//            if(voidImbalance > size_prev && middle > (*next)->high()
-//            || voidImbalance > size_next && middle < (*prev)->low()){
-            if(voidImbalance > size_prev && middle > (*next)->high()){
+            if(voidImbalance > size_prev /*&& middle > (*next)->high()*/
+            || voidImbalance > size_next /*&& middle < (*prev)->low()*/){
+            //if(voidImbalance > size_prev && middle > (*next)->high()){
                 AbstractArea imba;
                 imba.isBuyArea = isBuyArea;
                 imba.high = (*prev)->low();
