@@ -404,7 +404,8 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
         if(ctrlButtonPressed){
             addTakeProfit(set->high(), set->timestamp());
         }
-        if(shiftButtonPressed){
+        else if(shiftButtonPressed){
+            shiftButtonPressed = false;
             addStopLoss(set->high(), set->timestamp());
         }
         else{
@@ -417,7 +418,8 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
         if(ctrlButtonPressed){
             addTakeProfit(set->low(), set->timestamp());
         }
-        if(shiftButtonPressed){
+        else if(shiftButtonPressed){
+            shiftButtonPressed = false;
             addStopLoss(set->low(), set->timestamp());
         }
         else{
@@ -706,7 +708,7 @@ void CandleStickWidget::updateCurrentChart()
         //curr price line
         auto oldCurrPriceSer = currentPrice.series;
         auto newCurrPriceSer = new QLineSeries();
-        auto endTimeStamp = klinesSeries->sets().back()->timestamp();
+        auto endTimeStamp = klinesSeries->sets().last()->timestamp() * 2;
         auto beginTimeStamp = (*klinesSeries->sets().begin())->timestamp();
 
         newCurrPriceSer->append(beginTimeStamp, klinesSeries->sets().back()->close());
@@ -720,8 +722,8 @@ void CandleStickWidget::updateCurrentChart()
         chart->addSeries(newCurrPriceSer);
 
         auto pen = newCurrPriceSer->pen();
-        pen.setStyle(Qt::DotLine);
-        pen.setWidth(2);
+        pen.setWidth(0);
+        pen.setStyle(Qt::DashLine);
 
 
 
@@ -947,7 +949,7 @@ QAbstractAxis* CandleStickWidget::setAxisX(QCandlestickSeries *klineSeries, QCha
 QAbstractAxis *CandleStickWidget::setAxisY(QCandlestickSeries *klineSeries, QChart *chart)
 {
     auto axisY = new QValueAxis();
-    chart->addAxis(axisY, Qt::AlignLeft);
+    chart->addAxis(axisY, Qt::AlignRight);
     klinesSeries->attachAxis(axisY);
 
     axisY->setMax(axisY->max() * 1.01);

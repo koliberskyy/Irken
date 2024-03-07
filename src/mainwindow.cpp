@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     bar->show();
     timer->start(1000);
 
-    setMinimumSize(1280, 720);
+    setMinimumSize(800, 600);
     updateAccounts();
 
     updateAccTree();
