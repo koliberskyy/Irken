@@ -193,7 +193,11 @@ bool Position::setTradingStop(const QJsonObject &pos, const QString &api, const 
 
     QEventLoop eventLoop;
     QNetworkAccessManager mgr;
+    QTimer timer;
+
     QObject::connect(&mgr, SIGNAL(finished(QNetworkReply*)), &eventLoop, SLOT(quit()));
+    QObject::connect(&timer, &QTimer::timeout, &eventLoop, &QEventLoop::quit);
+
 
     QJsonObject obj;
     obj.insert("category", "linear");
@@ -214,6 +218,7 @@ bool Position::setTradingStop(const QJsonObject &pos, const QString &api, const 
 
     QNetworkReply *reply = mgr.post(req, data);
 
+    timer.start(10000);
     eventLoop.exec();
 
 
@@ -224,8 +229,13 @@ bool Position::setTradingStop(const QJsonObject &pos, const QString &api, const 
             reply->deleteLater();
             return true;
         }
+        else if(retCode == 10001){
+            std::cout << "Failure: request - " << url.toString().toStdString() << "\ndata:" << QJsonDocument::fromJson(data).toJson().toStdString() << "\nreply:\n" <<  QJsonDocument(obj).toJson().toStdString();
+            reply->deleteLater();
+            return true;
+        }
         else{
-            instruments::replyError(url, data);
+            std::cout << "Failure: request - " << url.toString().toStdString() << "\ndata:" << QJsonDocument::fromJson(data).toJson().toStdString() << "\nreply:\n" <<  QJsonDocument(obj).toJson().toStdString();
         }
     }
     else {
@@ -504,7 +514,7 @@ void Account::placeOrder(QJsonObject order)
             }
         }
         if(!exist_trigger)
-            Order::place(order, api(), secret(), Order::qty_to_post(balance(), order["price"].toString().toDouble(), order["qty"].toString().toDouble()));
+            while (!Order::place(order, api(), secret(), Order::qty_to_post(balance(), order["price"].toString().toDouble(), order["qty"].toString().toDouble())));
     }
 }
 
@@ -528,6 +538,19 @@ void Account::replyFinished(QNetworkReply *reply)
 void Account::cancelOrder(QJsonObject order)
 {
     Order::batch_cancel(QList<QJsonObject>{order}, api(), secret());
+}
+
+void Account::setTradingStop(const QJsonObject &pos, const QString &sl, const QString &tp)
+{
+    if(sl.isEmpty())
+        while(!Position::setTradingStop(pos, api(), secret(), pos["avgPrice"].toString(), pos["takeProfit"].toString()));
+    else
+        while(!Position::setTradingStop(pos, api(), secret(), sl, tp));
+}
+
+void Account::reducePosition(const QJsonObject &pos, double reducePercent)
+{
+    Position::reducePosition(pos, reducePercent, api(), secret());
 }
 
 double Order::qty_to_post(double acc_balance, double price)
@@ -732,7 +755,9 @@ bool Order::place(const QJsonObject &order, const QString &api, const QString &s
         auto obj = order;
         obj["qty"] =  QString::fromUtf8(instruments::double_to_utf8(obj["symbol"].toString().toUtf8(), instruments::Filter_type::lotSize, qty));
         obj.insert("category", "linear");
-        obj.insert("orderType", "Limit");
+
+        if(obj["orderType"].toString().isEmpty())
+            obj.insert("orderType", "Limit");
 
 
         QEventLoop eventLoop;

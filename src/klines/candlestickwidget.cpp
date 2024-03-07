@@ -301,6 +301,10 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
     if(Qt::Key_Control == event->key()){
         ctrlButtonPressed = true;
     }
+    if(Qt::Key_Shift == event->key()){
+        shiftButtonPressed = true;
+    }
+
     if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_H){
         this->setCursor(Qt::CrossCursor);
         deactivateAllMods();
@@ -346,12 +350,27 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
         }
     }
 
+    if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_B){
+        this->setCursor(Qt::ArrowCursor);
+        deactivateAllMods();
+        marketBuySellInit("Buy");
+    }
+
+    if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_S){
+        this->setCursor(Qt::ArrowCursor);
+        deactivateAllMods();
+        marketBuySellInit("Sell");
+    }
+
 }
 
 void CandleStickWidget::keyReleaseEvent(QKeyEvent *event)
 {
     if(Qt::Key_Control == event->key()){
         ctrlButtonPressed = false;
+    }
+    if(Qt::Key_Shift == event->key()){
+        shiftButtonPressed = false;
     }
 }
 
@@ -385,6 +404,9 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
         if(ctrlButtonPressed){
             addTakeProfit(set->high(), set->timestamp());
         }
+        if(shiftButtonPressed){
+            addStopLoss(set->high(), set->timestamp());
+        }
         else{
         addHigh(set->high(), set->timestamp());
         }
@@ -394,6 +416,9 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
     if(lowsAddModeActivated){
         if(ctrlButtonPressed){
             addTakeProfit(set->low(), set->timestamp());
+        }
+        if(shiftButtonPressed){
+            addStopLoss(set->low(), set->timestamp());
         }
         else{
             addLow(set->low(), set->timestamp());
@@ -544,6 +569,7 @@ void CandleStickWidget::areaDoubleClicked()
         auto sld_qty = new QSlider(Qt::Horizontal);
         sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
         sld_qty->setValue(sb_qty->value());
+        sld_qty->setSingleStep(sb_qty->singleStep());
         QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
         QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
 
@@ -589,9 +615,78 @@ void CandleStickWidget::areaDoubleClicked()
     }
 }
 
+void CandleStickWidget::marketBuySellInit(const QString &side)
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("My dialog"));
+
+    auto *form = new QFormLayout();
+
+
+    //dsb_tp
+    auto dsb_tp = new QDoubleSpinBox();
+    dsb_tp->setDecimals(instruments::dap(currentSymbol));
+    dsb_tp->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+    dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
+    if(takeProfit.series != nullptr){
+        dsb_tp->setValue(takeProfit.count);
+    }
+
+    //dsb_sl
+    auto dsb_sl = new QDoubleSpinBox();
+    dsb_sl->setDecimals(instruments::dap(currentSymbol));
+    dsb_sl->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+    dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
+    dsb_sl->setValue(stopLoss.count);
+
+    //sb_qty
+    auto sb_qty = new QSpinBox();
+    sb_qty->setRange(0, 20);
+    sb_qty->setValue(5);
+    sb_qty->setSingleStep(1);
+
+    //sld_qty
+    auto sld_qty = new QSlider(Qt::Horizontal);
+    sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
+    sld_qty->setValue(sb_qty->value());
+    sld_qty->setSingleStep(sb_qty->singleStep());
+    QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
+    QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    form->addRow(new QLabel(side));
+    form->addRow(new QLabel("ТП"), dsb_tp);
+    form->addRow(new QLabel("СЛ"), dsb_sl);
+    form->addRow(new QLabel("%"), sb_qty);
+    form->addRow(sld_qty);
+    form->addRow(btn_box);
+
+    dlg.setLayout(form);
+
+    // В случае, если пользователь нажал "Ok".
+    if(dlg.exec() == QDialog::Accepted) {
+        QJsonObject order;
+        order.insert("symbol", currentSymbol);
+        order.insert("orderType", "Market");
+        order.insert("side", side);
+        order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
+        order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
+        order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
+        order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, currentPrice.count)));
+        emit addOrderClicked(order);
+    }
+}
+
 void CandleStickWidget::updateCurrentChart()
 {
     if(!klinesSeries->sets().isEmpty() && klinesUpdated){
+
+        //last kline update
         auto do_nothing = true;
         QJsonArray klines;
         while(klines.isEmpty())
@@ -608,7 +703,43 @@ void CandleStickWidget::updateCurrentChart()
             klinesSeries->append(set);
         }
 
+        //curr price line
+        auto oldCurrPriceSer = currentPrice.series;
+        auto newCurrPriceSer = new QLineSeries();
+        auto endTimeStamp = klinesSeries->sets().back()->timestamp();
+        auto beginTimeStamp = (*klinesSeries->sets().begin())->timestamp();
 
+        newCurrPriceSer->append(beginTimeStamp, klinesSeries->sets().back()->close());
+        newCurrPriceSer->append(endTimeStamp, klinesSeries->sets().back()->close());
+
+        if(oldCurrPriceSer != nullptr)
+            chart->removeSeries(oldCurrPriceSer);
+
+        currentPrice.series = newCurrPriceSer;
+        currentPrice.count = klinesSeries->sets().back()->close();
+        chart->addSeries(newCurrPriceSer);
+
+        auto pen = newCurrPriceSer->pen();
+        pen.setStyle(Qt::DotLine);
+        pen.setWidth(2);
+
+
+
+        if(klinesSeries->sets().back()->close() > klinesSeries->sets().back()->open())
+            pen.setColor(QColor(0, 180, 0));
+        else
+            pen.setColor(Qt::red);
+
+        QList<qreal> dashes;
+        qreal space = 10;
+        dashes << 1 << space;
+        pen.setDashPattern(dashes);
+
+        newCurrPriceSer->setPen(pen);
+        newCurrPriceSer->attachAxis(axisX);
+        newCurrPriceSer->attachAxis(axisY);
+
+        newCurrPriceSer->setVisible(true);
     }
 }
 
@@ -944,10 +1075,10 @@ void CandleStickWidget::addTakeProfit(qreal price, qreal beginTimeStamp)
         takeProfit.clear();
     }
     auto lineSeries = new QLineSeries();
-
+    auto endTimeStamp = klinesSeries->sets().last()->timestamp() + (klinesSeries->sets().last()->timestamp() - klinesSeries->sets().at(klinesSeries->sets().size() - 2)->timestamp()) * 5;
 
     lineSeries->append(beginTimeStamp, price);
-    lineSeries->append(klinesSeries->sets().last()->timestamp(), price);
+    lineSeries->append(endTimeStamp, price);
 
     chart->addSeries(lineSeries);
 
@@ -959,6 +1090,71 @@ void CandleStickWidget::addTakeProfit(qreal price, qreal beginTimeStamp)
 
     takeProfit.series = lineSeries;
     takeProfit.count = price;
+}
+
+void CandleStickWidget::addStopLoss(qreal price, qreal beginTimeStamp)
+{
+    //dialog
+
+    QDialog dlg(this);
+    auto form = new QFormLayout();
+
+
+    auto btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    form->addRow(new QLabel("Смещение стопа"));
+
+    //sb_qty
+    auto sb_qty = new QSpinBox();
+    sb_qty->setRange(-10, 10);
+    sb_qty->setValue(0);
+    sb_qty->setSingleStep(1);
+
+    //sld_qty
+    auto sld_qty = new QSlider(Qt::Horizontal);
+    sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
+    sld_qty->setValue(sb_qty->value());
+    sld_qty->setSingleStep(sb_qty->singleStep());
+    QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
+    QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
+
+    form->addRow(new QLabel("Смещение %"), sb_qty);
+    form->addRow(sld_qty);
+    form->addRow(btn_box);
+
+    dlg.setLayout(form);
+
+    // В случае, если пользователь нажал "Ok".
+    if(dlg.exec() == QDialog::Accepted) {
+        if(sb_qty->value() != 0){
+            price = price + price * sb_qty->value() / 1000;
+        }
+        if(stopLoss.series != nullptr){
+            chart->removeSeries(stopLoss.series);
+            stopLoss.clear();
+        }
+        auto lineSeries = new QLineSeries();
+        auto endTimeStamp = klinesSeries->sets().last()->timestamp() + (klinesSeries->sets().last()->timestamp() - klinesSeries->sets().at(klinesSeries->sets().size() - 2)->timestamp()) * 5;
+
+        lineSeries->append(beginTimeStamp, price);
+        lineSeries->append(endTimeStamp, price);
+
+        chart->addSeries(lineSeries);
+
+        lineSeries->setColor(QColor(255, 0, 0));
+        lineSeries->attachAxis(axisX);
+        lineSeries->attachAxis(axisY);
+
+        lineSeries->setVisible(true);
+
+        stopLoss.series = lineSeries;
+        stopLoss.count = price;
+    }
+
 }
 
 void CandleStickWidget::delLiquid(qreal liquid)

@@ -75,11 +75,11 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(smartMoneyButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawAreas);
 
     auto graphicGrid = new QGridLayout();
-    graphicGrid->addWidget(symbolComboBox, 0, 0, Qt::AlignCenter);
-    graphicGrid->addWidget(timeframeComboBox, 0, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(liquidityButton, 0, 2, Qt::AlignCenter);
-    graphicGrid->addWidget(smartMoneyButton, 0, 3, Qt::AlignCenter);
-    graphicGrid->addWidget(candlestickWidget, 1, 0, 1, graphicGrid->columnCount());
+    graphicGrid->addWidget(symbolComboBox, 0, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(timeframeComboBox, 1, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(liquidityButton, 2, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(smartMoneyButton, 3, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
 
     auto graphicWgt = new QWidget();
     graphicWgt->setLayout(graphicGrid);
@@ -91,6 +91,41 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(toolBox);
 
 
+    //welcome dialog
+    QDialog dlg(this);
+
+    auto layout = new QVBoxLayout();
+    auto label = new QLabel();
+    QString str;
+    str.append("Не будь ебланом, нажми OK и прочитай что там написано.\n");
+
+    label->setText(str);
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox(&dlg);
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    layout->addWidget(label);
+    layout->addWidget(btn_box, Qt::AlignCenter);
+
+    dlg.setLayout(layout);
+
+    if(dlg.exec() == QDialog::Accepted){
+        displayInfo();
+    }
+
+
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if(Qt::Key_F1 == event->key()){
+        displayInfo();
+    }
+
+    QMainWindow::keyPressEvent(event);
 }
 
 MainWindow::~MainWindow()
@@ -171,6 +206,8 @@ void MainWindow::updatePosTree(QJsonArray positions)
                 std::stringstream ss;
                 ss << std::put_time(&bt, "%H:%M:%S");
                 childList.append(QString::fromStdString(ss.str()));
+
+                childList.append(accPtr->api());
 
                 auto isFinded = false;
                 //изменяем существующие
@@ -358,7 +395,6 @@ void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
 {
     auto symbol = item->text(2);
     QDialog dlg(this);
-    dlg.setWindowTitle(tr("My dialog"));
     auto form = new QFormLayout();
 
 
@@ -385,6 +421,99 @@ void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
             if(curr_item->text(curr_item->columnCount() - 1) == it->api()){
                 order["orderId"] = curr_item->text(ordTree->columnCount()-2);
                 it->cancelOrder(order);
+            }
+            }
+        }
+    }
+}
+
+void MainWindow::posItemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    //        QStringList posColumns{"Имя", "Фамилия", "Символ", "Лонг/шорт", "Pnl", "ТВХ", "Марк.", "ТП", "СЛ", "Маржа", "Плечо", "Обновлено", "api"};
+
+    //prepare pos
+    auto symbol = item->text(2);
+    auto side = item->text(3);
+    auto size = item->text(9);//different for every acc
+    auto tmp = item->text(4);
+    auto iter = std::find(tmp.begin(), tmp.end(), ',');
+    if(iter != tmp.end())
+        *iter = '.';
+
+    auto pnl = tmp.toDouble();
+
+
+    QJsonObject pos;
+
+    pos.insert("symbol", symbol);
+    pos.insert("side", side);
+
+    QDialog dlg(this);
+    auto form = new QFormLayout();
+
+
+    auto btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    auto cb_stopBU = new QCheckBox("Стоп б/у");
+    auto cb_close = new QCheckBox("Закрыть");
+    cb_stopBU->setChecked(true);
+    cb_close->setChecked(false);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    form->addRow(new QLabel("Закрыть позицию?"));
+
+    //sb_qty
+    auto sb_qty = new QSpinBox();
+    sb_qty->setRange(0, 100);
+    sb_qty->setValue(25);
+    sb_qty->setSingleStep(1);
+
+    //sld_qty
+    auto sld_qty = new QSlider(Qt::Horizontal);
+    sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
+    sld_qty->setValue(sb_qty->value());
+    sld_qty->setSingleStep(sb_qty->singleStep());
+    QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
+    QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
+
+    form->addRow(cb_stopBU);
+    form->addRow(cb_close);
+    form->addRow(new QLabel("%"), sb_qty);
+    form->addRow(sld_qty);
+    form->addRow(btn_box);
+
+    dlg.setLayout(form);
+
+    // В случае, если пользователь нажал "Ok".
+    if(dlg.exec() == QDialog::Accepted) {
+
+        auto list = posTree->findItems(item->text(2), Qt::MatchRecursive, 2);
+
+        for(auto it : accountList){
+            for(auto curr_item : list){
+            if(curr_item->text(curr_item->columnCount() - 1) == it->api()){
+                pos["size"] = curr_item->text(9);
+                pos["avgPrice"] = curr_item->text(5);
+                pos["stopLoss"] = curr_item->text(8);
+                pos["takeProfit"] = curr_item->text(7);
+
+                double close_pc;
+
+                if(cb_close->isChecked())
+                    close_pc = 100;
+                else
+                    close_pc = sb_qty->value();
+
+                if(cb_stopBU->isChecked() && pos["avgPrice"].toString().toDouble() != pos["stopLoss"].toString().toDouble() && pnl > 0){
+                    it->setTradingStop(pos);
+                }
+
+                if(close_pc != 0){
+                    it->reducePosition(pos, close_pc);
+                }
             }
             }
         }
@@ -465,9 +594,56 @@ void MainWindow::createConnctions()
     connect(smartMoney, SIGNAL(updated(QJsonArray)), this, SLOT(updateSmmTree(QJsonArray)));
 
     connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));
+    connect(posTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(posItemDoubleClicked(QTreeWidgetItem *, int)));
+
 
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
 
 
+}
+
+void MainWindow::displayInfo()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Справка"));
+
+    auto layout = new QVBoxLayout();
+    auto label = new QLabel();
+    QString str;
+    str.append("Для вызова этой справки нажми f1 в любое время\n");
+    str.append("\n");
+    str.append("Список горячих клавиш:\n");
+    str.append("ctrl+b - Купить ПО РЫНКУ\n");
+    str.append("ctrl+s - Продать ПО РЫНКУ\n");
+    str.append("ctrl+a - Переключить в режим выставления зоны\n");
+    str.append("ctrl+d - Переключить в режим удаления элементов рисования\n");
+    str.append("ctrl+l - Переключить в режим выставления лоёв\n");
+    str.append("ctrl+h - Переключить в режим выставления хуёв\n");
+    str.append("\t в режимах лоёв и хуёв: \n");
+    str.append("\t\t держи ctrl для выставления тейк-профита \n");
+    str.append("\t\t держи shift для выставления стоп-лосса \n");
+    str.append("Esc - выключить все режимы\n");
+    str.append("\n");
+    str.append("Два раза кликни по позиции чтобы закрыть её или выставить стоп б/у\n");
+    str.append("Два раза кликни по ордеру чтобы закрыть его\n");
+    str.append("Два раза кликни зоне чтобы выложить ордер\n");
+    str.append("\n");
+    str.append("Если что-то идет не по плану то проверь интернет, а затем выключи и включи снова.\n");
+    str.append("Если это не помогло вынь голову из жопы и попробуй еще раз.\n");
+
+    label->setText(str);
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox(&dlg);
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    layout->addWidget(label);
+    layout->addWidget(btn_box, Qt::AlignCenter);
+
+    dlg.setLayout(layout);
+
+    if(dlg.exec() == QDialog::Accepted){}
 }
 

@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QProgressBar>
 #include <QComboBox>
+#include <QCheckBox>
 
 #include <memory>
 
@@ -25,14 +26,18 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
-
     ~MainWindow();
+
+protected:
+    virtual void keyPressEvent(QKeyEvent *event) override;
+
 public slots:
     void updateAccTree();
     void updatePosTree(QJsonArray positions);
     void updateOrdTree(QJsonArray orders);
     void updateSmmTree(QJsonArray orders);
     void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
+    void posItemDoubleClicked(QTreeWidgetItem *item, int column);
 private slots:
     void timerChanged();
     void graphicControlComboChanged();
@@ -75,6 +80,7 @@ private:
 
     void updateAccounts();
     void createConnctions();
+    void displayInfo();
 
 
 };

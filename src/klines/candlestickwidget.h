@@ -47,6 +47,12 @@ struct LowLiquid : public AbstractLiquid{
 struct TakeProfit : public AbstractLiquid{
     virtual bool isFarther(AbstractLiquid* other)override{ return false;}
 };
+struct StopLoss : public AbstractLiquid{
+    virtual bool isFarther(AbstractLiquid* other)override{ return false;}
+};
+struct CurrentPrice : public AbstractLiquid{
+    virtual bool isFarther(AbstractLiquid* other)override{ return false;}
+};
 struct AbstractArea{
     QAreaSeries *series;
     QLineSeries *stopLine;
@@ -115,9 +121,7 @@ public slots:
     void autoDrawAreas();
     void updateCurrentChart();
 
-
 protected:
-
     virtual void mouseMoveEvent(QMouseEvent *pEvent) override;
     virtual void mousePressEvent(QMouseEvent *pEvent) override;
     virtual void mouseReleaseEvent(QMouseEvent *pEvent) override;
@@ -130,12 +134,14 @@ private slots:
     void klineClicked(QCandlestickSet *set);
     void areaClicked();
     void areaDoubleClicked();
+    void marketBuySellInit(const QString &side);
 
 private:
     QChart *chart {nullptr};
     QPoint m_oPrePos;
     bool m_bLeftButtonPressed{false};
     bool ctrlButtonPressed{false};
+    bool shiftButtonPressed{false};
     bool klinesUpdated{false};
     QCandlestickSeries *klinesSeries {nullptr};
 
@@ -145,6 +151,8 @@ private:
     std::unordered_map<QString, QList<LowLiquid>> lowsList;
     std::unordered_map<QString, QList<AbstractArea>> areas;
     TakeProfit takeProfit;
+    StopLoss stopLoss;
+    CurrentPrice currentPrice;
     const AbstractArea* findArea(QAreaSeries *series);
 
     QAbstractAxis *axisX;
@@ -166,6 +174,7 @@ private:
     void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1);
     void addTakeProfit(qreal price, qreal beginTimeStamp);
+    void addStopLoss(qreal price, qreal beginTimeStamp);
     void delLiquid(qreal liquid);
 
     void addExistSerieses();

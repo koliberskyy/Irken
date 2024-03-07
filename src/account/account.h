@@ -25,8 +25,10 @@ class Position{
 public:
     virtual void foo() = 0;
     static bool setTradingStop(const QJsonObject &pos, const QString &api, const QString &secret, const QString &sl = "", const QString &tp = "");
+    /*!
+    позиция оязательно должна содержать символ, бай/селл и размер, принимает reducePercent в процентах (НЕ В СОТЫХ ДОЛЯХ, А В ПРОЦЕНТАХ БЛЯДЬ)
+    */
     static void reducePosition(const QJsonObject &pos, double reducePercent, const QString &api, const QString &secret);
-
     /*!
     возвращает ПНЛ в процентах (НЕ В СОТЫХ ДОЛЯХ, А В ПРОЦЕНТАХ БЛЯДЬ)
     */
@@ -91,6 +93,11 @@ public slots:
     void placeOrder(QJsonObject order);
     void replyFinished(QNetworkReply *reply);
     void cancelOrder(QJsonObject order);
+    /*!
+    Позиция должна содержать цену входа, ТП, СЛ и символ. Можно передать в качеств сл нихуя и тогда стоп переместится на твх
+    */
+    void setTradingStop(const QJsonObject &pos, const QString &sl = "", const QString &tp = "");
+    void reducePosition(const QJsonObject &pos, double reducePercent);
 
 
 signals:
