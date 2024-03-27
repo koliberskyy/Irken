@@ -114,11 +114,13 @@ class CandleStickWidget : public QChartView
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
 signals:
-    void addOrderClicked(QJsonObject order);
+    void addOrderClicked(QJsonObject order, int leverage);
 public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
     void autoDrawLiquidities();
-    void autoDrawAreas();
+    void autoDrawImbalance();
+    void autoDrawOrderBlocks();
+
     void updateCurrentChart();
 
 protected:
@@ -172,7 +174,8 @@ private:
 
     void addLow(qreal low, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
-    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1);
+    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1, const QColor &color = QColor(153, 0, 255));
+    void addArea(AbstractArea area, const QColor &color = QColor(153, 0, 255));
     void addTakeProfit(qreal price, qreal beginTimeStamp);
     void addStopLoss(qreal price, qreal beginTimeStamp);
     void delLiquid(qreal liquid);

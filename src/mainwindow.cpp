@@ -2,6 +2,8 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
+      accounts{new AccountKunteynir()},
+      positions{new PositionKunteynir()},
       dateTimeEdit(new QDateTimeEdit()),
       smmUpdateprogressBar(new QProgressBar),
       timer(new QTimer(this)),
@@ -71,18 +73,36 @@ MainWindow::MainWindow(QWidget *parent)
     liquidityButton = new QPushButton("Ликвидности");
     QObject::connect(liquidityButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawLiquidities);
 
-    smartMoneyButton = new QPushButton("Зоны");
-    QObject::connect(smartMoneyButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawAreas);
+    imbalanceButton = new QPushButton("Имбалансы");
+    QObject::connect(imbalanceButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawImbalance);
+
+    orderblockButton = new QPushButton("Ордер Блоки");
+    QObject::connect(orderblockButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawOrderBlocks);
+
+    setLeverageButton = new QPushButton("Установить плечо");
+    QObject::connect(setLeverageButton, &QPushButton::pressed, this, &MainWindow::setLeverage);
 
     autocontrolcheckbox = new QCheckBox("Автоконтроль");
     autocontrolcheckbox->setChecked(false);
+
+    maxLeverageLabel = new QLabel("Максимальное плечо");
+    maxLeverageDSB = new QDoubleSpinBox();
+    maxLeverageDSB->setMaximum(150);
+    maxLeverageDSB->setMinimum(1);
+    maxLeverageDSB->setReadOnly(true);
+    maxLeverageDSB->setValue(instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
+
 
     auto graphicGrid = new QGridLayout();
     graphicGrid->addWidget(symbolComboBox, 0, 1, Qt::AlignCenter);
     graphicGrid->addWidget(timeframeComboBox, 1, 1, Qt::AlignCenter);
     graphicGrid->addWidget(liquidityButton, 2, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(smartMoneyButton, 3, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(autocontrolcheckbox, 4, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(imbalanceButton, 3, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(orderblockButton, 4, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(autocontrolcheckbox, 5, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(maxLeverageLabel, 6, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(maxLeverageDSB, 7, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(setLeverageButton, 8, 1, Qt::AlignCenter);
 
     graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
 
@@ -90,37 +110,24 @@ MainWindow::MainWindow(QWidget *parent)
     graphicWgt->setLayout(graphicGrid);
 
     toolBox->addItem(graphicWgt, "График");
+    toolBox->addItem(accounts, "Аккаунты(бета)");
+
+    //positions
+
+    auto accList_abs = accounts->get_items();
+    QList<AccountItem *> accList;
+    for(auto it : accList_abs){
+        accList.push_back((AccountItem*)it);
+    }
+    positions->set_accounts(accList);
+    connect(this, &MainWindow::timeToUpdatePositions, positions, &PositionKunteynir::download);
+    connect(this, &MainWindow::timeToUpdateBalances, accounts, &AccountKunteynir::updateBalance);
+
+    toolBox->addItem(positions, "Позиции (бета)");
 
     createConnctions();
 
     setCentralWidget(toolBox);
-
-
-    //welcome dialog
-    QDialog dlg(this);
-
-    auto layout = new QVBoxLayout();
-    auto label = new QLabel();
-    QString str;
-    str.append("Не будь ебланом, нажми OK и прочитай что там написано.\n");
-
-    label->setText(str);
-
-    QDialogButtonBox *btn_box = new QDialogButtonBox(&dlg);
-    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    layout->addWidget(label);
-    layout->addWidget(btn_box, Qt::AlignCenter);
-
-    dlg.setLayout(layout);
-
-    if(dlg.exec() == QDialog::Accepted){
-        displayInfo();
-    }
-
 
 }
 
@@ -525,6 +532,22 @@ void MainWindow::posItemDoubleClicked(QTreeWidgetItem *item, int column)
     }
 }
 
+void MainWindow::setLeverage()
+{
+    auto choosed = AccountItem::showAccountChooseDialog(accounts->list(), "Аккаунты на которых необходимо изменить Плечо");
+    if(!choosed.isEmpty()){
+        auto leverage = showLeverageChooseDialog();
+        if(leverage > 0)
+            for (auto it : choosed){
+                auto info = bybitInfo();
+
+                do{
+                   info = Methods::setLeverage(symbolComboBox->currentText(), leverage,  it->get_api(), it->get_secret());
+                }while(info.retCode() != 0 && info.retCode() != 110043);
+            }
+    }
+}
+
 void MainWindow::timerChanged()
 {
     auto current = QDateTime::currentDateTime();
@@ -532,42 +555,40 @@ void MainWindow::timerChanged()
 
     //update pos
     if(posUpdateTime->secsTo(current) > *posUpdateFluencySec && positionControlActivated){
-        for(auto &it : accountList){
-            it->updatePositions(autocontrolcheckbox->isChecked());
-        }
+//        for(auto &it : accountList){
+//            it->updatePositions(autocontrolcheckbox->isChecked());
+//        }
         posUpdateTime->setDate(current.date());
         posUpdateTime->setTime(current.time());
+
+        if(positions->isUpdated()){
+            emit timeToUpdatePositions(nullptr);
+        }
     }
 
-    //update ord
+    //update ord + balance
     if(ordUpdateTime->secsTo(current) > *ordUpdateFluencySec){
         for(auto &it : accountList){
-            it->updateBalance();
             it->updateOrders();
+            it->updateBalance();
         }
         ordUpdateTime->setDate(current.date());
         ordUpdateTime->setTime(current.time());
+        //emit timeToUpdateBalances();
     }
 
+    //update charts
     if(chartUpdateTime->secsTo(current) > *chartUpdateFluencySec){
-        candlestickWidget->updateCurrentChart();
+        emit timeToUpdateKlines();
         chartUpdateTime->setDate(current.date());
         chartUpdateTime->setTime(current.time());
     }
-
-    //smartmoney update
-//    if(smmUpdateTime->secsTo(current) > *smmUpdateFluencySec || smartMoney->firstRun()){
-//        if(smartMoney->isUpdateFinished)
-//            smartMoney->updateSmartMoney(6);
-
-//        smmUpdateTime->setDate(current.date());
-//        smmUpdateTime->setTime(current.time());
-//    }
 }
 
 void MainWindow::graphicControlComboChanged()
 {
     candlestickWidget->updateKlines(symbolComboBox->currentText(), timeframeComboBox->currentText());
+    maxLeverageDSB->setValue(instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
 }
 
 
@@ -593,7 +614,7 @@ void MainWindow::createConnctions()
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
         connect(it, SIGNAL(positionsUpdated(QJsonArray)), this, SLOT(updatePosTree(QJsonArray)));
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
-        connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject)), it, SLOT(placeOrder(QJsonObject)));
+        connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), it, SLOT(placeOrder(QJsonObject, int)));
 
     }
     connect(smartMoney, SIGNAL(updated(QJsonArray)), this, SLOT(updateSmmTree(QJsonArray)));
@@ -603,6 +624,8 @@ void MainWindow::createConnctions()
 
 
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
+
+    connect(this, &MainWindow::timeToUpdateKlines, candlestickWidget, &CandleStickWidget::updateCurrentChart);
 
 
 }
@@ -650,5 +673,48 @@ void MainWindow::displayInfo()
     dlg.setLayout(layout);
 
     if(dlg.exec() == QDialog::Accepted){}
+}
+
+double MainWindow::showLeverageChooseDialog()
+{
+    QDialog dlg(this);
+    auto form = new QFormLayout();
+
+
+    auto btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+
+    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    form->addRow(new QLabel("Выбор плеча"));
+
+    //sb_qty
+    auto sb_lev = new QSpinBox();
+    sb_lev->setRange(1, instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
+    sb_lev->setValue(100);
+    sb_lev->setSingleStep(1);
+
+    //sld_qty
+    auto sld_lev = new QSlider(Qt::Horizontal);
+    sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
+    sld_lev->setValue(sb_lev->value());
+    sld_lev->setSingleStep(sb_lev->singleStep());
+    QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
+    QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
+
+    form->addRow(sb_lev);
+    form->addRow(sld_lev);
+    form->addRow(btn_box);
+
+    dlg.setLayout(form);
+
+    // В случае, если пользователь нажал "Ok".
+    if(dlg.exec() == QDialog::Accepted) {
+        return sb_lev->value();
+    }
+
+    return -1;
 }
 

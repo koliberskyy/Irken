@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.3.0 LANGUAGES CXX)
+project(Irken VERSION 6.5.0 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -8,7 +8,8 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 14)
+#использую 17й стандарт для корректной работы смарт поинтеров без использования make_unique_shared<>
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core Network Test Charts REQUIRED)
@@ -18,6 +19,9 @@ include_directories(
     src
     src/account
     src/klines
+    src/base
+    src/items
+    src/kunteynirs
     )
 
 set(PROJECT_SOURCES
@@ -36,7 +40,26 @@ set(PROJECT_SOURCES
         src/klines/candlestickwidget.h
         src/klines/candlestickwidget.cpp
 
+        src/base/abstractitem.h
+        src/base/abstractitem.cpp
+        src/base/abstractkunteynir.h
+        src/base/abstractkunteynir.cpp
+        src/base/methods.h
+        src/base/methods.cpp
+        src/base/requests.h
+        src/base/requests.cpp
 
+        src/items/accountitem.h
+        src/items/accountitem.cpp
+        src/items/positionitem.h
+        src/items/positionitem.cpp
+
+        src/kunteynirs/accountkunteynir.h
+        src/kunteynirs/accountkunteynir.cpp
+        src/kunteynirs/positionkunteynir.h
+        src/kunteynirs/positionkunteynir.cpp
+
+        README.txt
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

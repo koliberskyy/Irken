@@ -97,7 +97,7 @@ void InstrumentsInfo::update_filters()
     }
 }
 
-QByteArray InstrumentsInfo::double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val)
+QByteArray InstrumentsInfo::double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage)
 {
     switch (f_type) {
     case Filter_type::price:
@@ -107,7 +107,7 @@ QByteArray InstrumentsInfo::double_to_utf8(const QByteArray &symbol, Filter_type
         return filters.leverage[symbol].double_to_utf8(val);
         break;
     case Filter_type::lotSize:
-        return filters.lotSize[symbol].double_to_utf8(val * trading_leverage(symbol));
+        return filters.lotSize[symbol].double_to_utf8(val * tradingLeverage);
         break;
     case Filter_type::lotSize_without_leverage_multipy:
         return filters.lotSize[symbol].double_to_utf8(val);
@@ -183,6 +183,17 @@ void replyError(const QUrl &url, const QByteArray &reply)
 
 QByteArray timeToByteArray(QDateTime count){
     return QByteArray(std::to_string(count.toMSecsSinceEpoch()).c_str());}
+
+void replyError(const QUrl &url, const QByteArray &data, const QByteArray &reply)
+{
+    time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
+    std::tm bt = *std::localtime(&timer);
+    std::cout << std::put_time(&bt, "%d.%m.%y, %H:%M") << "_______________\n" << std::endl;
+    std::cout << "Failure: \n" << "Request: " << url.url().toStdString()
+              << "\nData: " << QJsonDocument::fromJson(data).toJson().toStdString()
+              << "\nReply: \n" << QJsonDocument::fromJson(reply).toJson().toStdString()
+              << "\nuser Info: " << url.userInfo().toStdString() << std::endl;
+}
 
 
 }//namespace bybit, instrumentsinfo

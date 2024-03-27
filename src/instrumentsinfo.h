@@ -110,6 +110,7 @@ inline int id(const QByteArray &symbol){
 namespace instruments{
 
 void replyError(const QUrl &url, const QByteArray &reply);
+void replyError(const QUrl &url, const QByteArray &data, const QByteArray &reply);
 QByteArray timeToByteArray(QDateTime count);
 
 
@@ -169,17 +170,17 @@ public:
     explicit InstrumentsInfo();
     void update_filters();
 
-    QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val);
+    QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage = 20);
 };
 
 static std::unique_ptr<InstrumentsInfo> ii = nullptr;
 
-inline QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val){
+inline QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage = 20){
     if (ii == nullptr){
         ii = std::make_unique<InstrumentsInfo>();
     }
 
-    return ii->double_to_utf8(symbol, f_type, val);
+    return ii->double_to_utf8(symbol, f_type, val, tradingLeverage);
 }
 
 inline double maxLeverage(const QByteArray &symbol){

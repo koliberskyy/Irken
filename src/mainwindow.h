@@ -17,6 +17,8 @@
 
 #include "account.h"
 #include "smartmoney.h"
+#include "accountkunteynir.h"
+#include "positionkunteynir.h"
 
 class MainWindow : public QMainWindow
 {
@@ -38,11 +40,22 @@ public slots:
     void updateSmmTree(QJsonArray orders);
     void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
     void posItemDoubleClicked(QTreeWidgetItem *item, int column);
+    void setLeverage();
+
+
 private slots:
     void timerChanged();
     void graphicControlComboChanged();
 
+signals:
+    void timeToUpdatePositions(AccountItem*);
+    void timeToUpdateBalances();
+    void timeToUpdateKlines();
+
 private:
+
+    AccountKunteynir *accounts;
+    PositionKunteynir *positions;
 
     //для отключения контроя позиций вместо true написать false
     bool positionControlActivated{true};
@@ -74,14 +87,21 @@ private:
 
     QComboBox *symbolComboBox;
     QComboBox *timeframeComboBox;
+    QLabel *maxLeverageLabel;
+    QDoubleSpinBox *maxLeverageDSB;
 
     QPushButton *liquidityButton;
-    QPushButton *smartMoneyButton;
+    QPushButton *imbalanceButton;
+    QPushButton *orderblockButton;
+    QPushButton *setLeverageButton;
+
     QCheckBox *autocontrolcheckbox;
 
     void updateAccounts();
     void createConnctions();
     void displayInfo();
+
+    double showLeverageChooseDialog();
 
 
 };

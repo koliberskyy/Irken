@@ -129,7 +129,7 @@ void CandleStickWidget::autoDrawLiquidities()
     }
 }
 
-void CandleStickWidget::autoDrawAreas()
+void CandleStickWidget::autoDrawImbalance()
 {
     //imbalance
     auto list = klinesSeries->sets();
@@ -169,6 +169,7 @@ void CandleStickWidget::autoDrawAreas()
                 imba.type = "im";
 
                 imbalances.push_back(std::move(imba));
+
             }
 
 
@@ -189,6 +190,7 @@ void CandleStickWidget::autoDrawAreas()
                 imba.type = "im";
 
                 imbalances.push_back(std::move(imba));
+
             }
 
         }
@@ -198,7 +200,7 @@ void CandleStickWidget::autoDrawAreas()
         next++;
     }
 
-    //сбор
+    //сбор имбалансов
     auto imbalance = imbalances.begin();
     while(imbalance != imbalances.end()){
         auto set = list.begin();
@@ -217,7 +219,9 @@ void CandleStickWidget::autoDrawAreas()
                 }
             }
             if(set != list.end()){
-                addArea(imbalance->high, imbalance->low, imbalance->timestamp, imbalance->isBuyArea, (*set)->timestamp());
+                imbalance->endtimestamp = (*set)->timestamp();
+                addArea(*imbalance);
+                //addArea(imbalance->high, imbalance->low, imbalance->timestamp, imbalance->isBuyArea, (*set)->timestamp());
                 imbalance = imbalances.erase(imbalance);
             }
             else
@@ -227,9 +231,145 @@ void CandleStickWidget::autoDrawAreas()
             imbalance++;
     }
 
-    //добавление несобранных
+
+
+    //добавление несобранных  imba
     for(auto &imbalance : imbalances){
-        addArea(imbalance.high, imbalance.low, imbalance.timestamp, imbalance.isBuyArea);
+        //addArea(imbalance.high, imbalance.low, imbalance.timestamp, imbalance.isBuyArea);
+        imbalance.endtimestamp = -1;
+        addArea(imbalance);
+    }
+
+}
+
+void CandleStickWidget::autoDrawOrderBlocks()
+{
+    //imbalance
+    auto list = klinesSeries->sets();
+    QList<AbstractArea> orderblocks;
+
+    auto prev = list.begin();
+    auto curr = prev + 1;
+    auto next = curr + 1;
+    while(next != list.end()){
+
+        //войд имбаланса больше размера одной из соседних свечей, а другая не прекрывает половину его тела
+        auto body = (*curr)->close() - (*curr)->open();
+        auto isBuyArea = body > 0;
+
+        if(!isBuyArea)
+            body *= (-1);
+
+        auto size_prev = (*prev)->high() - (*prev)->low();
+        auto size_next = (*next)->high() - (*next)->low();
+
+        qreal voidImbalance;
+        qreal middle;
+        if(isBuyArea){
+            voidImbalance = (*next)->low() - (*prev)->high();
+            //middle = (*prev)->high() + voidImbalance/2;
+            middle = (*curr)->open() + body/2;
+
+            if(voidImbalance > size_prev /*&& middle < (*next)->low()*/
+            || voidImbalance > size_next /*&& middle > (*prev)->high()*/){
+            //if(voidImbalance > size_prev && middle < (*next)->low()){
+
+                //orderblock
+                auto it_ob = curr;
+                it_ob--;
+                auto ob_size = (*it_ob)->high() - (*it_ob)->low();
+                if((*it_ob)->low() < (*curr)->low() && it_ob != list.begin() && ob_size < voidImbalance){
+                    auto it_ob_prev = it_ob - 1;
+                    if(it_ob_prev != list.begin()){
+                        auto it_ob_prev_prev = it_ob_prev - 1;
+                        if((*it_ob)->low() < (*it_ob_prev)->low() && (*it_ob)->low() < (*it_ob_prev_prev)->low()){
+                            AbstractArea ob;
+                            ob.isBuyArea = isBuyArea;
+                            ob.high = (*it_ob)->low();
+                            ob.low = (*it_ob)->high();
+                            ob.timestamp = (*it_ob)->timestamp();
+                            ob.type = "ob";
+
+                            orderblocks.push_back(std::move(ob));
+                        }
+                    }
+                }
+
+            }
+        }
+        else{
+            voidImbalance = (*prev)->low() - (*next)->high();
+            //middle = (*next)->low() + voidImbalance/2;
+            middle = (*curr)->close() + body/2;
+
+            if(voidImbalance > size_prev /*&& middle > (*next)->high()*/
+            || voidImbalance > size_next /*&& middle < (*prev)->low()*/){
+            //if(voidImbalance > size_prev && middle > (*next)->high()){
+
+                //orderblock
+                auto it_ob = curr;
+                it_ob--;
+                auto ob_size = (*it_ob)->high() - (*it_ob)->low();
+                if((*it_ob)->high() > (*curr)->high() && it_ob != list.begin() && ob_size < voidImbalance){
+                    auto it_ob_prev = it_ob - 1;
+                    if(it_ob_prev != list.begin()){
+                        auto it_ob_prev_prev = it_ob_prev - 1;
+                        if((*it_ob)->high() > (*it_ob_prev)->high() && (*it_ob)->high() > (*it_ob_prev_prev)->high()){
+                            AbstractArea ob;
+                            ob.isBuyArea = isBuyArea;
+                            ob.high = (*it_ob)->low();
+                            ob.low = (*it_ob)->high();
+                            ob.timestamp = (*it_ob)->timestamp();
+                            ob.type = "ob";
+
+                            orderblocks.push_back(std::move(ob));
+                        }
+                    }
+                }
+            }
+
+        }
+
+        prev++;
+        curr++;
+        next++;
+    }
+
+
+    //сбор ордерблоков
+    auto orderblock = orderblocks.begin();
+    while(orderblock != orderblocks.end()){
+        auto set = list.begin();
+        while((*set)->timestamp() <= orderblock->timestamp){
+            set++;
+            if(set == list.end()){
+                break;
+            }
+        }
+        if(set != list.end()){
+            //плюсуемся во избежании сбора ордерблока его же имбалансом
+            set++;
+                //тут стоит логическое не ВНИМАНИЕ
+            while(!((*set)->low() <= orderblock->_05() && (*set)->high() >= orderblock->_05())){
+                set++;
+                if(set == list.end()){
+                    break;
+                }
+            }
+            if(set != list.end()){
+                addArea(orderblock->high, orderblock->low, orderblock->timestamp, orderblock->isBuyArea, (*set)->timestamp(), QColor(75, 0, 130));
+                orderblock = orderblocks.erase(orderblock);
+            }
+            else
+                orderblock++;
+        }
+        else
+            orderblock++;
+    }
+
+    //добавление несобранных  ob
+    for(auto &orderblock : orderblocks){
+        addArea(orderblock.high, orderblock.low, orderblock.timestamp, orderblock.isBuyArea, -1, QColor(75, 0, 130));
     }
 }
 
@@ -334,6 +474,8 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
         hightsList.clear();
         lowsList.clear();
         areas.clear();
+        stopLoss.clear();
+        takeProfit.clear();
         for(auto series : chart->series()){
             if(series->type() != QCandlestickSeries::SeriesTypeCandlestick){
                 chart->removeSeries(series);
@@ -496,6 +638,14 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
     if(delModeActivated){
         delLiquid(set->high());
         delLiquid(set->low());
+        if(stopLoss.timestamp == set->timestamp()){
+            chart->removeSeries(stopLoss.series);
+            stopLoss.clear();
+        }
+        if(takeProfit.timestamp == set->timestamp()){
+            chart->removeSeries(takeProfit.series);
+            takeProfit.clear();
+        }
     }
 
 
@@ -533,12 +683,16 @@ void CandleStickWidget::areaDoubleClicked()
         dlg.setWindowTitle(tr("My dialog"));
 
         auto *form = new QFormLayout();
+
         //dsb_price
         auto dsb_price = new QDoubleSpinBox();
         dsb_price->setDecimals(instruments::dap(currentSymbol));
         dsb_price->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
         dsb_price->setSingleStep(instruments::stepPrice(currentSymbol));
-        if(area->isBuyArea){
+        if(area->type == "im"){
+            dsb_price->setValue(area->_05());
+        }
+        else if(area->isBuyArea){
             dsb_price->setValue(area->_07());
         }
         else{
@@ -548,7 +702,7 @@ void CandleStickWidget::areaDoubleClicked()
         //dsb_tp
         auto dsb_tp = new QDoubleSpinBox();
         dsb_tp->setDecimals(instruments::dap(currentSymbol));
-        dsb_tp->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+        dsb_tp->setRange(0, instruments::maxPrice(currentSymbol));
         dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
         if(takeProfit.series != nullptr){
             dsb_tp->setValue(takeProfit.count);
@@ -557,9 +711,15 @@ void CandleStickWidget::areaDoubleClicked()
         //dsb_sl
         auto dsb_sl = new QDoubleSpinBox();
         dsb_sl->setDecimals(instruments::dap(currentSymbol));
-        dsb_sl->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+        dsb_sl->setRange(0, instruments::maxPrice(currentSymbol));
         dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
-        dsb_sl->setValue(area->_stop());
+
+        if(stopLoss.series != nullptr){
+            dsb_sl->setValue(stopLoss.count);
+        }
+        else{
+            dsb_sl->setValue(area->_stop());
+        }
 
         //sb_qty
         auto sb_qty = new QSpinBox();
@@ -574,6 +734,21 @@ void CandleStickWidget::areaDoubleClicked()
         sld_qty->setSingleStep(sb_qty->singleStep());
         QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
         QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
+
+
+        //sb_lev
+        auto sb_lev = new QSpinBox();
+        sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
+        sb_lev->setValue(sb_lev->maximum());
+        sb_lev->setSingleStep(1);
+
+        //sld_lev
+        auto sld_lev = new QSlider(Qt::Horizontal);
+        sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
+        sld_lev->setValue(sb_lev->value());
+        sld_lev->setSingleStep(sb_lev->singleStep());
+        QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
+        QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
 
         //buySellComboBox
         auto buySellComboBox = new QComboBox();
@@ -599,6 +774,8 @@ void CandleStickWidget::areaDoubleClicked()
         form->addRow(new QLabel("СЛ"), dsb_sl);
         form->addRow(new QLabel("%"), sb_qty);
         form->addRow(sld_qty);
+        form->addRow(new QLabel("Плечо"), sb_lev);
+        form->addRow(sld_lev);
         form->addRow(btn_box);
 
         dlg.setLayout(form);
@@ -606,13 +783,14 @@ void CandleStickWidget::areaDoubleClicked()
         // В случае, если пользователь нажал "Ok".
         if(dlg.exec() == QDialog::Accepted) {
             QJsonObject order;
+            order.insert("category", "linear");
             order.insert("symbol", currentSymbol);
             order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_price->value())));
             order.insert("side", buySellComboBox->currentText());
             order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
             order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
             order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
-            emit addOrderClicked(order);
+            emit addOrderClicked(order, sb_lev->value());
         }
     }
 }
@@ -655,6 +833,21 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
     QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
 
+    //sb_lev
+    auto sb_lev = new QSpinBox();
+    sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
+    sb_lev->setValue(sb_lev->maximum());
+    sb_lev->setSingleStep(1);
+
+    //sld_lev
+    auto sld_lev = new QSlider(Qt::Horizontal);
+    sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
+    sld_lev->setValue(sb_lev->value());
+    sld_lev->setSingleStep(sb_lev->singleStep());
+    QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
+    QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
+
+
     QDialogButtonBox *btn_box = new QDialogButtonBox();
     btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
@@ -666,6 +859,8 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     form->addRow(new QLabel("СЛ"), dsb_sl);
     form->addRow(new QLabel("%"), sb_qty);
     form->addRow(sld_qty);
+    form->addRow(new QLabel("Плечо"), sb_lev);
+    form->addRow(sld_lev);
     form->addRow(btn_box);
 
     dlg.setLayout(form);
@@ -673,6 +868,7 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     // В случае, если пользователь нажал "Ok".
     if(dlg.exec() == QDialog::Accepted) {
         QJsonObject order;
+        order.insert("category", "linear");
         order.insert("symbol", currentSymbol);
         order.insert("orderType", "Market");
         order.insert("side", side);
@@ -680,7 +876,7 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
         order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
         order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
         order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, currentPrice.count)));
-        emit addOrderClicked(order);
+        emit addOrderClicked(order, sb_lev->value());
     }
 }
 
@@ -792,6 +988,8 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         else{
             chart->zoomReset();
             chart->removeAllSeries();
+            stopLoss.clear();
+            takeProfit.clear();
             chart->removeAxis(chart->axes(Qt::Horizontal).at(0));
             chart->removeAxis(chart->axes(Qt::Vertical).at(0));
         }
@@ -1005,7 +1203,7 @@ void CandleStickWidget::addHigh(qreal high, qreal beginTimeStamp, qreal endTimeS
     hightsList[currentSymbol].append(std::move(hl));
 }
 
-void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp)
+void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp, const QColor &color)
 {
     AbstractArea area;
     area.high = high;
@@ -1054,7 +1252,7 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     area._07Series = series07;
     area.stopLine = seriesStop;
 
-    QPen pen(QColor(153, 0, 255));
+    QPen pen(color);
     pen.setWidth(1);
     pen.setCosmetic(true);
     series->setPen(pen);
@@ -1067,6 +1265,65 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     areas[currentSymbol].append(area);
     QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
 
+
+}
+
+void CandleStickWidget::addArea(AbstractArea area, const QColor &color)
+{
+
+    if(area.endtimestamp < 0){
+        area.endtimestamp = klinesSeries->sets().last()->timestamp() + (klinesSeries->sets().last()->timestamp() - klinesSeries->sets().at(klinesSeries->sets().size() - 2)->timestamp()) * 5;
+    }
+
+    auto series0 = new QLineSeries();
+    auto series1 = new QLineSeries();
+    auto series07 = new QLineSeries();
+    auto series05 = new QLineSeries();
+    auto series03 = new QLineSeries();
+    auto seriesStop = new QLineSeries();
+
+    series0->append(area.timestamp, area.high);
+    series0->append(area.endtimestamp, area.high);
+
+    series1->append(area.timestamp, area.low);
+    series1->append(area.endtimestamp, area.low);
+
+    series07->append(area.timestamp, area._07());
+    series07->append(area.endtimestamp, area._07());
+    series07->setColor(QColor(255, 116, 23));
+
+    series05->append(area.timestamp, area._05());
+    series05->append(area.endtimestamp, area._05());
+    series05->setColor(QColor(255, 116, 23));
+
+    series03->append(area.timestamp, area._03());
+    series03->append(area.endtimestamp, area._03());
+    series03->setColor(QColor(255, 116, 23));
+
+    seriesStop->append(area.timestamp, area._stop());
+    seriesStop->append(area.endtimestamp, area._stop());
+    seriesStop->setColor(Qt::red);
+
+    auto series = new QAreaSeries(series0, series1);
+
+    area.series = series;
+    area._03Series = series03;
+    area._05Series = series05;
+    area._07Series = series07;
+    area.stopLine = seriesStop;
+
+    QPen pen(color);
+    pen.setWidth(1);
+    pen.setCosmetic(true);
+    series->setPen(pen);
+    series->setBrush(Qt::Dense7Pattern);
+
+    area.addToChart(chart);
+
+    area.attachAxis(axisX, axisY);
+
+    areas[currentSymbol].append(area);
+    QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
 
 }
 
@@ -1092,6 +1349,8 @@ void CandleStickWidget::addTakeProfit(qreal price, qreal beginTimeStamp)
 
     takeProfit.series = lineSeries;
     takeProfit.count = price;
+    takeProfit.timestamp = beginTimeStamp;
+
 }
 
 void CandleStickWidget::addStopLoss(qreal price, qreal beginTimeStamp)
@@ -1155,6 +1414,7 @@ void CandleStickWidget::addStopLoss(qreal price, qreal beginTimeStamp)
 
         stopLoss.series = lineSeries;
         stopLoss.count = price;
+        stopLoss.timestamp = beginTimeStamp;
     }
 
 }

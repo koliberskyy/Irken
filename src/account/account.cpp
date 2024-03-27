@@ -493,7 +493,7 @@ void Account::updateOrders()
 #endif
 }
 
-void Account::placeOrder(QJsonObject order)
+void Account::placeOrder(QJsonObject order, int leverage)
 {
     if(balance() > 10.0){
         QEventLoop eventLoop;
@@ -511,12 +511,12 @@ void Account::placeOrder(QJsonObject order)
         bool exist_trigger = false;
 
         for(auto ex : exist){
-            if(ex["symbol"] == order["symbol"] && ex["price"].toString().toDouble() == order["price"].toString().toDouble()){
+            if(ex["symbol"].toString() == order["symbol"].toString() && ex["price"].toString().toDouble() == order["price"].toString().toDouble()){
                 exist_trigger = true;
             }
         }
         if(!exist_trigger)
-            while (!Order::place(order, api(), secret(), Order::qty_to_post(balance(), order["price"].toString().toDouble(), order["qty"].toString().toDouble())));
+            while (!Order::place(order, api(), secret(), Order::qty_to_post(balance(), order["price"].toString().toDouble(), order["qty"].toString().toDouble()), leverage));
     }
 }
 
@@ -751,12 +751,14 @@ bool Order::place(const QJsonObject &order, const QString &api, const QString &s
 
 }
 
-bool Order::place(const QJsonObject &order, const QString &api, const QString &secret, double qty)
+bool Order::place(const QJsonObject &order, const QString &api, const QString &secret, double qty, int leverage)
 {
     if(qty > 0){
         auto obj = order;
-        obj["qty"] =  QString::fromUtf8(instruments::double_to_utf8(obj["symbol"].toString().toUtf8(), instruments::Filter_type::lotSize, qty));
-        obj.insert("category", "linear");
+        obj["qty"] =  QString::fromUtf8(instruments::double_to_utf8(obj["symbol"].toString().toUtf8(), instruments::Filter_type::lotSize, qty, leverage));
+
+        if(obj["category"].toString().isEmpty())
+            obj.insert("category", "linear");
 
         if(obj["orderType"].toString().isEmpty())
             obj.insert("orderType", "Limit");

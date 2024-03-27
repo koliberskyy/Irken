@@ -50,7 +50,7 @@ class Order{
 public:
     virtual void foo() = 0;
     static bool place(const QJsonObject &order, const QString &api, const QString &secret);
-    static bool place(const QJsonObject &order, const QString &api, const QString &secret, double qty);
+    static bool place(const QJsonObject &order, const QString &api, const QString &secret, double qty, int leverage = 20);
     static void batch_place(const QList<QJsonObject> orders, const QString &api, const QString &secret, const double balance);
     static void batch_cancel(const QList<QJsonObject> orders, const QString &api, const QString &secret);
     static double qty_to_post(double acc_balance, double price);
@@ -85,12 +85,11 @@ public:
     double getBalance()const {return data["balance"].toString().toDouble();}
     QByteArray api() const;
 
-
 public slots:
     void updateBalance();
     void updatePositions(bool autocontrol = true);
     void updateOrders();
-    void placeOrder(QJsonObject order);
+    void placeOrder(QJsonObject order, int leverage);
     void replyFinished(QNetworkReply *reply);
     void cancelOrder(QJsonObject order);
     /*!
