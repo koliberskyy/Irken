@@ -1,7 +1,8 @@
 #include "accountitem.h"
 
 AccountItem::AccountItem(QWidget *parent):
-    AbstractItem(parent)
+    AbstractItem(parent),
+    balanceWasUpdatedTime{new QDateTime(QDateTime(QDate(2012, 7, 6), QTime(23, 55, 0)))}
 {
     //name label
     label_name = new QLabel();
@@ -81,6 +82,11 @@ double AccountItem::get_balance() const
     return get_balance_str().toDouble();
 }
 
+QDateTime AccountItem::get_whenBalanceWasUpdated()
+{
+    return *balanceWasUpdatedTime;
+}
+
 QList<AccountItem *> AccountItem::showAccountChooseDialog(QList<AccountItem *> accounts, const QString &text, bool defaultCheckboxes)
 {
     auto dlg = new QDialog();
@@ -90,7 +96,7 @@ QList<AccountItem *> AccountItem::showAccountChooseDialog(QList<AccountItem *> a
 
     label->setText(text);
 
-    QDialogButtonBox *btn_box = new QDialogButtonBox(dlg);
+    QDialogButtonBox *btn_box = new QDialogButtonBox();
     btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
     connect(btn_box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
@@ -147,10 +153,18 @@ void AccountItem::set_balance(const QString &balance)
 {
     data["balance"] = balance;
     label_balance->setText(get_balance_str());
+    set_balanceWasUpdatedNow();
 }
 
 void AccountItem::set_balance(QString &&balance)
 {
     data["balance"] = std::forward<QString>(balance);
     label_balance->setText(get_balance_str());
+    set_balanceWasUpdatedNow();
+}
+
+void AccountItem::set_balanceWasUpdatedNow()
+{
+    balanceWasUpdatedTime->setDate(QDate::currentDate());
+    balanceWasUpdatedTime->setTime(QTime::currentTime());
 }

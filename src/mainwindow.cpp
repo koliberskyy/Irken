@@ -121,7 +121,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     positions->set_accounts(accList);
     connect(this, &MainWindow::timeToUpdatePositions, positions, &PositionKunteynir::download);
-    connect(this, &MainWindow::timeToUpdateBalances, accounts, &AccountKunteynir::updateBalance);
+    connect(this, SIGNAL(timeToUpdateBalances()), accounts, SLOT(updateBalance()));
 
     toolBox->addItem(positions, "Позиции (бета)");
 
@@ -534,17 +534,27 @@ void MainWindow::posItemDoubleClicked(QTreeWidgetItem *item, int column)
 
 void MainWindow::setLeverage()
 {
+
     auto choosed = AccountItem::showAccountChooseDialog(accounts->list(), "Аккаунты на которых необходимо изменить Плечо");
+
     if(!choosed.isEmpty()){
         auto leverage = showLeverageChooseDialog();
-        if(leverage > 0)
+        if(leverage > 0){
+            auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
             for (auto it : choosed){
                 auto info = bybitInfo();
+                pd->setLabelText(it->get_name() + " " + it->get_name_second());
 
                 do{
                    info = Methods::setLeverage(symbolComboBox->currentText(), leverage,  it->get_api(), it->get_secret());
+                   if(pd->wasCanceled()){
+                       break;
+                   }
                 }while(info.retCode() != 0 && info.retCode() != 110043);
+                pd->setValue(pd->value() + 1);
             }
+            pd->deleteLater();
+        }
     }
 }
 
@@ -614,9 +624,11 @@ void MainWindow::createConnctions()
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
         connect(it, SIGNAL(positionsUpdated(QJsonArray)), this, SLOT(updatePosTree(QJsonArray)));
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
-        connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), it, SLOT(placeOrder(QJsonObject, int)));
-
+        //legacy orders
+        //connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), it, SLOT(placeOrder(QJsonObject, int)));
     }
+    //new orders
+    connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), accounts, SLOT(shareOrder(QJsonObject, int)));
     connect(smartMoney, SIGNAL(updated(QJsonArray)), this, SLOT(updateSmmTree(QJsonArray)));
 
     connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));

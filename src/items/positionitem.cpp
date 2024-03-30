@@ -46,7 +46,7 @@ PositionItem::PositionItem(QWidget *parent):
     grid_st->addWidget(new QLabel("СЛ"), 1, 0);
     grid_st->addWidget(dsb_sl, 1, 1);
     auto pb_changeTpSl = new QPushButton("Изм.");
-    grid_st->addWidget(pb_changeTpSl, 0, 2, 1, 2);
+    grid_st->addWidget(pb_changeTpSl, 0, 2, 2, 1);
     connect(pb_changeTpSl, &QPushButton::pressed, this, &PositionItem::setTpSL);
 
 
@@ -301,7 +301,11 @@ void PositionItem::buttonClosePressed()
             order.insert("orderType", "Market");
 
             order.insert("reduceOnly", true);
+
+            auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
+
             for (auto it : choosed){
+                pd->setLabelText(it->get_name() + " " + it->get_name_second());
                 auto info = bybitInfo();
 
                 //qty
@@ -314,8 +318,13 @@ void PositionItem::buttonClosePressed()
                     do{
                         info = Methods::placeOrder(order, it->get_api(), it->get_secret());
                     }while(info.retCode() != 0);
+                pd->setValue(pd->value() + 1);
+
 
             }
+
+            pd->deleteLater();
+
         }
     }
 }
@@ -325,9 +334,12 @@ void PositionItem::buttonStopBUPressed()
     auto choosed = AccountItem::showAccountChooseDialog(acc_owners, "Аккаунты на которых необходимо изменить ТП/СЛ");
 
     if(!choosed.isEmpty()){
+        auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
 
             for (auto it : choosed){
                 auto info = bybitInfo();
+                pd->setLabelText(it->get_name() + " " + it->get_name_second());
+
 
                 auto sl = get_poe(it).toDouble();
 
@@ -336,8 +348,11 @@ void PositionItem::buttonStopBUPressed()
                        info = Methods::setTradingStop(get_symbol(), it->get_api(), it->get_secret(),
                                                 sl, get_tp(it).toDouble());
                     }while(info.retCode() != 0 && info.retCode() != 34040);
+                pd->setValue(pd->value() + 1);
+
 
             }
+        pd->deleteLater();
     }
 }
 
@@ -348,16 +363,21 @@ void PositionItem::setTpSL()
     if(!choosed.isEmpty()){
         auto sltp = showSlTpChooseDialog();
 
-        if(sltp.first > 0 && sltp.second > 0)
+        if(sltp.first > 0 && sltp.second > 0){
+            auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
+
             for (auto it : choosed){
                 auto info = bybitInfo();
+                pd->setLabelText(it->get_name() + " " + it->get_name_second());
 
                 do{
                    info = Methods::setTradingStop(get_symbol(), it->get_api(), it->get_secret(),
                                             sltp.first, sltp.second);
                 }while(info.retCode() != 0);
-
+                pd->setValue(pd->value() + 1);
             }
+            pd->deleteLater();
+        }
     }
 }
 

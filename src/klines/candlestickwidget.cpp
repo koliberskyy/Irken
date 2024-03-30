@@ -285,8 +285,8 @@ void CandleStickWidget::autoDrawOrderBlocks()
                         if((*it_ob)->low() < (*it_ob_prev)->low() && (*it_ob)->low() < (*it_ob_prev_prev)->low()){
                             AbstractArea ob;
                             ob.isBuyArea = isBuyArea;
-                            ob.high = (*it_ob)->low();
-                            ob.low = (*it_ob)->high();
+                            ob.high = (*it_ob)->high();
+                            ob.low = (*it_ob)->low();
                             ob.timestamp = (*it_ob)->timestamp();
                             ob.type = "ob";
 
@@ -317,8 +317,8 @@ void CandleStickWidget::autoDrawOrderBlocks()
                         if((*it_ob)->high() > (*it_ob_prev)->high() && (*it_ob)->high() > (*it_ob_prev_prev)->high()){
                             AbstractArea ob;
                             ob.isBuyArea = isBuyArea;
-                            ob.high = (*it_ob)->low();
-                            ob.low = (*it_ob)->high();
+                            ob.high = (*it_ob)->high();
+                            ob.low = (*it_ob)->low();
                             ob.timestamp = (*it_ob)->timestamp();
                             ob.type = "ob";
 
@@ -783,6 +783,7 @@ void CandleStickWidget::areaDoubleClicked()
         // В случае, если пользователь нажал "Ok".
         if(dlg.exec() == QDialog::Accepted) {
             QJsonObject order;
+            order.insert("orderType", "Limit");
             order.insert("category", "linear");
             order.insert("symbol", currentSymbol);
             order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_price->value())));
@@ -790,7 +791,13 @@ void CandleStickWidget::areaDoubleClicked()
             order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
             order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
             order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
-            emit addOrderClicked(order, sb_lev->value());
+
+            if(!order["price"].toString().isEmpty())
+                emit addOrderClicked(order, sb_lev->value());
+            else
+                std::cout << "order price isEmpty\n";
+
+            dlg.deleteLater();
         }
     }
 }
@@ -877,6 +884,8 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
         order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
         order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, currentPrice.count)));
         emit addOrderClicked(order, sb_lev->value());
+
+        dlg.deleteLater();
     }
 }
 

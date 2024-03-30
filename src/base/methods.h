@@ -21,6 +21,8 @@ struct bybitInfo
                                    else              return 222222;}
     auto result() const           {return obj["result"].toObject();}
     auto list()const              {return result()["list"].toArray();}
+
+    void clear(){obj = QJsonObject();}
 };
 
 
@@ -35,7 +37,11 @@ const bybitInfo setTradingStop(const QString &symbol, const QString &api, const 
 
 const bybitInfo placeOrder(const QJsonObject &order, const QString &api, const QString &secret);
 
-const bybitInfo setLeverage( const QString &symbol, double leverage, const QString &api, const QString &secret);
+const bybitInfo setLeverage(const QString &symbol, double leverage, const QString &api, const QString &secret);
+
+const bybitInfo getOpenOrders(const QString &api, const QString &secret);
+
+const double qty_to_post(double acc_balance, double price, double percent_from_balance = -1.0);
 
 }
 

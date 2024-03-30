@@ -119,3 +119,28 @@ const bybitInfo Methods::setLeverage(const QString &symbol, double leverage, con
 
     return bybitInfo();
 }
+
+const bybitInfo Methods::getOpenOrders(const QString &api, const QString &secret)
+{
+    QString method("https://api.bybit.com/v5/order/realtime?");
+    QByteArray query("category=linear&settleCoin=USDT");
+
+    auto obj = Requests::get(method, query, api, secret, api);
+    bybitInfo info{obj};
+
+    if(!obj.isEmpty()){
+        if(info.retCode() == 0){
+            return info;
+        }
+    }
+
+    return bybitInfo();
+}
+
+const double Methods::qty_to_post(double acc_balance, double price, double percent_from_balance)
+{
+    if(percent_from_balance <= 0)
+        return settings::one_order_qty_pc_from_balance * acc_balance / (100 * price);
+
+    return percent_from_balance * acc_balance / (100 * price);
+}
