@@ -120,6 +120,12 @@ public slots:
     void autoDrawLiquidities();
     void autoDrawImbalance();
     void autoDrawOrderBlocks();
+    /*
+    * Neutral/short/long indicators
+    */
+    void autoDrawNSL();
+    void autoDrawNSLRG();
+    void autoDrawNSLLiquds();
 
     void updateCurrentChart();
 
@@ -181,6 +187,11 @@ private:
     void delLiquid(qreal liquid);
 
     void addExistSerieses();
+
+    QList<std::pair<int, QCandlestickSet*>> NSL();
+    QList<std::pair<int, QCandlestickSet*>> NSLRG(QList<std::pair<int, QCandlestickSet*>> NSL);
+    std::pair<QList<HighLiquid>, QList<LowLiquid>> NSLLiquids(QList<std::pair<int, QCandlestickSet*>> NSLRG);
+
 
 
 };

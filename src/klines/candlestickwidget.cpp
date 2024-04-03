@@ -373,6 +373,167 @@ void CandleStickWidget::autoDrawOrderBlocks()
     }
 }
 
+void CandleStickWidget::autoDrawNSL()
+{
+
+    auto min = ((QValueAxis*)axisY)->min();
+
+
+    auto NSLList = NSL();
+
+
+    for(auto it : NSLList){
+        auto NSL = it.first;
+        auto set = it.second;
+
+        QColor colorNSL;
+        switch(NSL){
+        case 0:
+            colorNSL = Qt::red;
+            break;
+        case 1:
+            colorNSL = Qt::blue;
+            break;
+        case 2:
+            colorNSL = Qt::green;
+            break;
+        }
+
+        auto lineSeries1 = new QLineSeries();
+
+        lineSeries1->append(set->timestamp(), set->low());
+        lineSeries1->append(set->timestamp(), min);
+
+        chart->addSeries(lineSeries1);
+
+        lineSeries1->setPen(Qt::DotLine);
+        lineSeries1->setColor(colorNSL);
+        lineSeries1->attachAxis(axisX);
+        lineSeries1->attachAxis(axisY);
+
+        lineSeries1->setVisible(true);
+
+    }
+
+}
+
+void CandleStickWidget::autoDrawNSLRG()
+{
+    auto min = ((QValueAxis*)axisY)->min();
+    auto NSLList = NSL();
+    auto NSLRGList = NSLRG(NSLList);
+
+    for(auto it : NSLRGList){
+        auto NSL = it.first;
+        auto set = it.second;
+
+        QColor colorNSL;
+        switch(NSL){
+        case 0:
+            colorNSL = Qt::red;
+            break;
+        case 1:
+            colorNSL = Qt::blue;
+            break;
+        case 2:
+            colorNSL = Qt::green;
+            break;
+        }
+
+        if(colorNSL != Qt::blue){
+            auto lineSeries1 = new QLineSeries();
+
+            lineSeries1->append(set->timestamp(), set->low());
+            lineSeries1->append(set->timestamp(), min);
+
+            chart->addSeries(lineSeries1);
+
+            lineSeries1->setPen(Qt::DotLine);
+            lineSeries1->setColor(colorNSL);
+            lineSeries1->attachAxis(axisX);
+            lineSeries1->attachAxis(axisY);
+
+            lineSeries1->setVisible(true);
+
+        }
+    }
+}
+
+void CandleStickWidget::autoDrawNSLLiquds()
+{
+    auto NSLList = NSL();
+    auto NSLRGList = NSLRG(NSLList);
+    auto list = klinesSeries->sets();
+
+    auto tmp = NSLLiquids(NSLRGList);
+    auto hights = tmp.first;
+    auto lows = tmp.second;
+
+    //сбор hight
+    auto high = hights.begin();
+    while(high != hights.end()){
+        auto set = list.begin();
+        while((*set)->timestamp() <= high->timestamp){
+            set++;
+            if(set == list.end()){
+                break;
+            }
+        }
+        if(set != list.end()){
+            while((*set)->high() < high->count){
+                set++;
+                if(set == list.end()){
+                    break;
+                }
+            }
+            if(set != list.end()){
+                addHigh(high->count, high->timestamp, (*set)->timestamp());
+                high = hights.erase(high);
+            }
+            else
+                high++;
+        }
+        else
+            high++;
+    }
+
+    //сбор lows
+    auto low = lows.begin();
+    while(low != lows.end()){
+        auto set = list.begin();
+        while((*set)->timestamp() <= low->timestamp){
+            set++;
+            if(set == list.end()){
+                break;
+            }
+        }
+        if(set != list.end()){
+            while((*set)->low() > low->count){
+                set++;
+                if(set == list.end()){
+                    break;
+                }
+            }
+            if(set != list.end()){
+                addLow(low->count, low->timestamp, (*set)->timestamp());
+                low = lows.erase(low);
+            }
+            else
+                low++;
+        }
+        else
+            low++;
+    }
+
+    //добавлеие несобранных
+    for(auto high : hights){
+        addHigh(high.count, high.timestamp);
+    }
+    for(auto low : lows){
+        addLow(low.count, low.timestamp);
+    }
+}
+
 void CandleStickWidget::mouseMoveEvent(QMouseEvent *pEvent)
 {
 
@@ -381,8 +542,6 @@ void CandleStickWidget::mouseMoveEvent(QMouseEvent *pEvent)
         this->chart->scroll(-oDeltaPos.x(), oDeltaPos.y());
         m_oPrePos = pEvent->pos();
     }
-
-    //QChartView::mouseMoveEvent(pEvent);
 
 }
 
@@ -1467,4 +1626,191 @@ void CandleStickWidget::addExistSerieses()
     for(auto it : areasCopy){
         addArea(it.high, it.low, it.timestamp, it.isBuyArea);
     }
+}
+
+QList<std::pair<int, QCandlestickSet *> > CandleStickWidget::NSL()
+{
+    auto list = klinesSeries->sets();
+    QList<std::pair<int, QCandlestickSet*>> NSLList;
+
+
+    for(auto set : list){
+        auto size = set->high() - set->low();
+
+        int NSL{-1};
+        //нижняя треть
+        if(set->close() < set->low() + size/3){
+            NSL = 0;
+        }
+        //средняя треть
+        else if(set->close() <= set->low() + 2*size/3){
+            NSL = 1;
+        }
+        //верхняя треть
+        else if(set->close() > set->low() + 2*size/3){
+            NSL = 2;
+        }
+
+        NSLList.append(std::pair(NSL, set));
+    }
+
+    return NSLList;
+}
+
+QList<std::pair<int, QCandlestickSet *> > CandleStickWidget::NSLRG(QList<std::pair<int, QCandlestickSet *> > NSL)
+{
+    auto prev = NSL.begin();
+    auto curr = NSL.begin() + 1;
+    auto next = NSL.begin() + 2;
+
+
+    while(next != NSL.end()){
+        if(curr->first == 1){
+            //red blue blue ... red
+            if(prev->first == 0){
+                auto lastBlue = next;
+                while (lastBlue->first == 1){
+                    lastBlue++;
+                    if(lastBlue == NSL.end()){
+                        break;
+                    }
+                }
+                if(lastBlue != NSL.end()){
+                    auto firstBlue = curr;
+                    while (firstBlue != lastBlue){
+                        firstBlue->first = 0;
+                        firstBlue++;
+                    }
+                }
+            }
+
+            //green blue blue ... green
+            if(prev->first == 2){
+                auto lastBlue = next;
+                while (lastBlue->first == 1){
+                    lastBlue++;
+                    if(lastBlue == NSL.end()){
+                        break;
+                    }
+                }
+                if(lastBlue != NSL.end()){
+                    auto firstBlue = curr;
+                    while (firstBlue != lastBlue){
+                        firstBlue->first = 2;
+                        firstBlue++;
+                    }
+                }
+            }
+        }
+
+        // пропуски красная зеленая красная (зеленую красит в красную) и наоборот
+        if(prev->first == 0 && next->first == 0 && curr->first == 2){
+            curr->first = 0;
+        }
+        else
+            if(prev->first == 2 && next->first == 2 && curr->first == 0){
+            curr->first = 2;
+        }
+
+
+        curr++;
+        prev++;
+        next++;
+    }
+
+    return NSL;
+}
+
+std::pair<QList<HighLiquid>, QList<LowLiquid> > CandleStickWidget::NSLLiquids(QList<std::pair<int, QCandlestickSet *> > NSLRG)
+{
+    QList<HighLiquid> hights;
+    QList<LowLiquid> lows;
+
+    auto setPair = NSLRG.begin();
+    while(setPair != NSLRG.end()){
+        auto zoneBegin = setPair;
+        auto zoneEnd = setPair;
+        QCandlestickSet *highest{nullptr};
+        QCandlestickSet *lowest{nullptr};
+
+        while(setPair->first == zoneBegin->first){
+            setPair++;
+            if(setPair == NSLRG.end())
+                break;
+        }
+        if(setPair != NSLRG.end()){
+
+            zoneEnd = setPair;
+            highest = zoneBegin->second;
+            lowest = zoneBegin->second;
+            auto highestIt = zoneBegin;
+            auto lowestIt = zoneBegin;
+
+            zoneBegin++;
+
+            while(zoneBegin != zoneEnd){
+                    if(zoneBegin->second->low() < lowest->low()){
+                        lowest = zoneBegin->second;
+                        lowestIt = zoneBegin;
+                    }
+
+                    if(zoneBegin->second->high() > highest->high()){
+                        highest = zoneBegin->second;
+                        highestIt = zoneBegin;
+                    }
+
+                zoneBegin++;
+            }
+
+
+            //смещение
+            //high
+            if(highestIt != NSLRG.begin() && highest != nullptr){
+
+                auto prev = --highestIt;
+
+                while(prev != NSLRG.begin()){
+                    if(prev->second->high() > highest->high()){
+                        highest = prev->second;
+                        prev--;
+                    }
+                    else
+                        break;
+                }
+            }
+            //low
+            if(lowestIt != NSLRG.begin() && lowest != nullptr){
+
+                auto prev = --lowestIt;
+
+                while(prev != NSLRG.begin()){
+                    if(prev->second->low() < lowest->low()){
+                        lowest = prev->second;
+                        prev--;
+                    }
+                    else
+                        break;
+                }
+            }
+
+
+
+            if(highest != nullptr){
+                HighLiquid hl;
+                hl.set(nullptr, highest->high(), highest->timestamp(), 0);
+                hights.push_back(hl);
+            }
+            if(lowest != nullptr){
+                LowLiquid ll;
+                ll.set(nullptr, lowest->low(), lowest->timestamp(), 0);
+                lows.push_back(ll);
+            }
+
+            highest = nullptr;
+            lowest = nullptr;
+
+        }
+    }
+
+    return std::pair(hights, lows);
 }

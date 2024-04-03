@@ -82,6 +82,13 @@ MainWindow::MainWindow(QWidget *parent)
     setLeverageButton = new QPushButton("Установить плечо");
     QObject::connect(setLeverageButton, &QPushButton::pressed, this, &MainWindow::setLeverage);
 
+    NSLButton = new QPushButton("NSL");
+    NSLRGButton = new QPushButton("NSL RG");
+    NSLLiquids = new QPushButton("NSL Liquid");
+    QObject::connect(NSLButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSL);
+    QObject::connect(NSLRGButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLRG);
+    QObject::connect(NSLLiquids, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLLiquds);
+
     autocontrolcheckbox = new QCheckBox("Автоконтроль");
     autocontrolcheckbox->setChecked(false);
 
@@ -103,6 +110,9 @@ MainWindow::MainWindow(QWidget *parent)
     graphicGrid->addWidget(maxLeverageLabel, 6, 1, Qt::AlignCenter);
     graphicGrid->addWidget(maxLeverageDSB, 7, 1, Qt::AlignCenter);
     graphicGrid->addWidget(setLeverageButton, 8, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(NSLButton, 9, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(NSLRGButton, 10, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(NSLLiquids, 11, 1, Qt::AlignCenter);
 
     graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
 

@@ -94,6 +94,9 @@ private:
     QPushButton *imbalanceButton;
     QPushButton *orderblockButton;
     QPushButton *setLeverageButton;
+    QPushButton *NSLButton;
+    QPushButton *NSLRGButton;
+    QPushButton *NSLLiquids;
 
     QCheckBox *autocontrolcheckbox;
 
