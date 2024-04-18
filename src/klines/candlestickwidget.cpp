@@ -4,6 +4,7 @@ CandleStickWidget::CandleStickWidget(QWidget *parent)
     : QChartView{parent}
 {
     updateKlines("BTCUSDT", "W", "1000");
+
 }
 
 void CandleStickWidget::updateKlines(const QString &symbol, const QString &interval, const QString &limit)
@@ -534,6 +535,101 @@ void CandleStickWidget::autoDrawNSLLiquds()
     }
 }
 
+void CandleStickWidget::autoDrawHLTS()
+{
+    std::set<HighLiquid> hights;
+    std::set<LowLiquid> lows;
+    auto list = klinesSeries->sets();
+
+    for(auto it : hightsList[currentSymbol]){
+        hights.insert(it);
+    }
+
+    if(!hights.empty()){
+
+        auto currHighIt = hights.begin();
+        auto nextHighIt = hights.begin();
+        nextHighIt++;
+
+        auto currSetIt = list.begin();
+        if(!lowsList.empty()){
+            lowsList.clear();
+        }
+        //add lows
+        while (nextHighIt != hights.end()){
+            //смещение итератора на позицию первого хая
+            while((*currSetIt)->timestamp() != currHighIt->timestamp){
+                currSetIt++;
+            }
+            // поиск минимаьного лоя между хаями
+            auto count = (*currSetIt)->low();
+            auto ts = (*currSetIt)->timestamp();
+            currSetIt++;
+            while((*currSetIt)->timestamp() != nextHighIt->timestamp){
+                if((*currSetIt)->low() <= count){
+                    count = (*currSetIt)->low();
+                    ts = (*currSetIt)->timestamp();
+                }
+                currSetIt++;
+            }
+
+            addLow(count, ts);
+            currHighIt++;
+            nextHighIt++;
+        }
+
+        for(auto it : lowsList[currentSymbol]){
+            lows.insert(it);
+        }
+        //рисуем треугольники
+        auto lowIt = lows.begin();
+        currHighIt = hights.begin();
+        nextHighIt = hights.begin();
+        nextHighIt++;
+
+        while(lowIt != lows.end() && nextHighIt != hights.end()){
+            auto ls = new QLineSeries();
+            ls->append(currHighIt->timestamp, currHighIt->count);
+            ls->append(lowIt->timestamp, lowIt->count);
+            ls->append(nextHighIt->timestamp, nextHighIt->count);
+            ls->append(currHighIt->timestamp, currHighIt->count);
+
+            QPen pen(Qt::blue);
+            pen.setWidth(3);
+            ls->setPen(pen);
+
+            chart->addSeries(ls);
+            ls->attachAxis(axisX);
+            ls->attachAxis(axisY);
+
+            lowIt++;
+            currHighIt++;
+            nextHighIt++;
+        }
+
+        //чистим старые лои
+        for(auto it: lowsList[currentSymbol]){
+            chart->removeSeries(it.series);
+        }
+        lowsList.clear();
+
+        //соединяем новые лои
+        auto ls = new QLineSeries();
+        for(auto it : lows){
+            ls->append(it.timestamp, it.count);
+        }
+        QPen pen(Qt::red);
+        pen.setWidth(3);
+        ls->setPen(pen);
+
+        chart->addSeries(ls);
+        ls->attachAxis(axisX);
+        ls->attachAxis(axisY);
+
+
+    }
+}
+
 void CandleStickWidget::mouseMoveEvent(QMouseEvent *pEvent)
 {
 
@@ -1048,6 +1144,15 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     }
 }
 
+void CandleStickWidget::showToolTip(const QPointF &point)
+{
+    if(!isSomeModeActivated()){
+        // поймать сендера, преобразовать в указатель на абстрактную серию, вытащить поле нейм и вставить в тул тип
+        // а в series->name() можно запихнуть любые данные в json формате, а здесь их парсить
+        QToolTip::showText(this->cursor().pos(), "Даня лох", nullptr, {}, 1000 * 5);
+    }
+}
+
 void CandleStickWidget::updateCurrentChart()
 {
     if(!klinesSeries->sets().isEmpty() && klinesUpdated){
@@ -1432,6 +1537,8 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
 
     areas[currentSymbol].append(area);
     QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
+    QObject::connect(area.series, SIGNAL(hoverEnter(QString, QPointF, QPointF)), this, SLOT(showToolTip(QString, QPointF, QPointF)));
+
 
 
 }
@@ -1491,7 +1598,11 @@ void CandleStickWidget::addArea(AbstractArea area, const QColor &color)
     area.attachAxis(axisX, axisY);
 
     areas[currentSymbol].append(area);
+
+
     QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
+    QObject::connect(area.series, SIGNAL(clicked(const QPointF &)), this, SLOT(showToolTip(const QPointF &)));
+
 
 }
 
@@ -1813,4 +1924,14 @@ std::pair<QList<HighLiquid>, QList<LowLiquid> > CandleStickWidget::NSLLiquids(QL
     }
 
     return std::pair(hights, lows);
+}
+
+bool AbstractLiquid::operator <(const AbstractLiquid &other) const
+{
+    return timestamp < other.timestamp;
+}
+
+bool AbstractLiquid::operator ==(const AbstractLiquid &other) const
+{
+    return timestamp == other.timestamp;
 }

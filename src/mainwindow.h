@@ -97,6 +97,7 @@ private:
     QPushButton *NSLButton;
     QPushButton *NSLRGButton;
     QPushButton *NSLLiquids;
+    QPushButton *HLTSButton;
 
     QCheckBox *autocontrolcheckbox;
 

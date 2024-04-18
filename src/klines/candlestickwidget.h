@@ -37,6 +37,8 @@ struct AbstractLiquid{
     virtual bool isFarther(AbstractLiquid*) = 0;
     void set(QLineSeries* s, qreal c, qreal t, qreal et){series = s; count = c; timestamp = t; endtimestamp = et;}
     void clear(){series = nullptr; count = 0; timestamp = 0; endtimestamp = 0;}
+    bool operator < (const AbstractLiquid & other) const;
+    bool operator == (const AbstractLiquid & other) const;
 };
 struct HighLiquid : public AbstractLiquid{
     virtual bool isFarther(AbstractLiquid* other)override{ return count > other->count;}
@@ -67,7 +69,7 @@ struct AbstractArea{
     qreal endtimestamp;
     bool isBuyArea;
 
-    static constexpr qreal stopStep{0.0001};
+    static constexpr qreal stopStep{0.001};
 
     qreal particional(qreal count)const{return (high-low)*count + low;}
     qreal _07()const{return particional(0.7); }
@@ -126,6 +128,7 @@ public slots:
     void autoDrawNSL();
     void autoDrawNSLRG();
     void autoDrawNSLLiquds();
+    void autoDrawHLTS();
 
     void updateCurrentChart();
 
@@ -143,6 +146,7 @@ private slots:
     void areaClicked();
     void areaDoubleClicked();
     void marketBuySellInit(const QString &side);
+    void showToolTip(const QPointF &point);
 
 private:
     QChart *chart {nullptr};
@@ -191,6 +195,7 @@ private:
     QList<std::pair<int, QCandlestickSet*>> NSL();
     QList<std::pair<int, QCandlestickSet*>> NSLRG(QList<std::pair<int, QCandlestickSet*>> NSL);
     std::pair<QList<HighLiquid>, QList<LowLiquid>> NSLLiquids(QList<std::pair<int, QCandlestickSet*>> NSLRG);
+
 
 
 
