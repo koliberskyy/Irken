@@ -25,6 +25,7 @@
 #include <QSlider>
 #include <QDoubleSpinBox>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QToolTip>
 #include <unordered_map>
 #include "smartmoney.h"
@@ -119,16 +120,38 @@ signals:
     void addOrderClicked(QJsonObject order, int leverage);
 public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
+    /*
+    * SmartMoney indicator
+    */
     void autoDrawLiquidities();
+    /*
+    * SmartMoney indicator
+    */
     void autoDrawImbalance();
+    /*
+    * SmartMoney indicator
+    */
     void autoDrawOrderBlocks();
     /*
-    * Neutral/short/long indicators
+    * Neutral/short/long indicator
     */
     void autoDrawNSL();
+    /*
+    * Neutral/short/long indicator
+    */
     void autoDrawNSLRG();
+    /*
+    * Neutral/short/long indicator
+    */
     void autoDrawNSLLiquds();
+    /*
+    * High Low Triange Strip indicator
+    */
     void autoDrawHLTS();
+    /*
+    * Trading sessions indicator
+    */
+    void autoDrawTradingSessions();
 
     void updateCurrentChart();
 
@@ -156,6 +179,7 @@ private:
     bool shiftButtonPressed{false};
     bool klinesUpdated{false};
     QCandlestickSeries *klinesSeries {nullptr};
+    QList<QAreaSeries *>activeTradingSessions{nullptr};
 
     QString currentSymbol;
     QString currentTimeframe;
@@ -195,6 +219,8 @@ private:
     QList<std::pair<int, QCandlestickSet*>> NSL();
     QList<std::pair<int, QCandlestickSet*>> NSLRG(QList<std::pair<int, QCandlestickSet*>> NSL);
     std::pair<QList<HighLiquid>, QList<LowLiquid>> NSLLiquids(QList<std::pair<int, QCandlestickSet*>> NSLRG);
+
+    QList<QAreaSeries*> drawTradingSession(int hourBegin, int hourEnd, QColor color);
 
 
 

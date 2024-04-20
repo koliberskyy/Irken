@@ -86,10 +86,12 @@ MainWindow::MainWindow(QWidget *parent)
     NSLRGButton = new QPushButton("NSL RG");
     NSLLiquids = new QPushButton("NSL Liquid");
     HLTSButton = new QPushButton("HLTS");
+    TradingSessionsButton = new QPushButton("Торговые сессии");
     QObject::connect(NSLButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSL);
     QObject::connect(NSLRGButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLRG);
     QObject::connect(NSLLiquids, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLLiquds);
     QObject::connect(HLTSButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawHLTS);
+    QObject::connect(TradingSessionsButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawTradingSessions);
 
     autocontrolcheckbox = new QCheckBox("Автоконтроль");
     autocontrolcheckbox->setChecked(false);
@@ -116,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent)
     graphicGrid->addWidget(NSLRGButton, 10, 1, Qt::AlignCenter);
     graphicGrid->addWidget(NSLLiquids, 11, 1, Qt::AlignCenter);
     graphicGrid->addWidget(HLTSButton, 12, 1, Qt::AlignCenter);
+    graphicGrid->addWidget(TradingSessionsButton, 13, 1, Qt::AlignCenter);
 
     graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
 

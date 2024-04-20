@@ -630,6 +630,87 @@ void CandleStickWidget::autoDrawHLTS()
     }
 }
 
+void CandleStickWidget::autoDrawTradingSessions()
+{
+    auto dlg = new QDialog();
+
+    auto layout = new QVBoxLayout();
+    auto label = new QLabel();
+
+    label->setText("Выбор торговой сессии");
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox();
+    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+
+    connect(btn_box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+
+    layout->addWidget(label);
+
+    QList <QCheckBox *> boxes;
+
+    boxes.append(new QCheckBox("1.Passific (Blue)"));
+    boxes.append(new QCheckBox("2.Asian (Yellow)"));
+    boxes.append(new QCheckBox("3.European (Green)"));
+    boxes.append(new QCheckBox("4.American (Red)"));
+
+    for(auto box : boxes){
+        layout->addWidget(box);
+    }
+
+    layout->addWidget(btn_box, Qt::AlignCenter);
+    dlg->setLayout(layout);
+
+    if(dlg->exec() == QDialog::Accepted){
+
+        int activeTradingSessionCount{0};
+
+        if(!activeTradingSessions.isEmpty()){
+            for(auto session : activeTradingSessions){
+                chart->removeSeries(session);
+            }
+            activeTradingSessions.clear();
+        }
+
+        for(auto box : boxes){
+
+            if(box->isChecked()){
+
+                auto symbol = box->text().begin()->toLatin1();
+                auto activeTradingSessionCount = std::atoi(&symbol);
+                switch (activeTradingSessionCount) {
+                    case 1:
+                    //passificoceanic
+                    activeTradingSessions.append(drawTradingSession(0, 9, Qt::blue));
+                    break;
+                    case 2:
+                    //asian
+                    activeTradingSessions.append(drawTradingSession(3, 12, Qt::yellow));
+                    break;
+                    case 3:
+                    //european
+                    activeTradingSessions.append(drawTradingSession(10, 19, Qt::green));
+                    break;
+                    case 4:
+                    //american
+                    activeTradingSessions.append(drawTradingSession(15, 0, Qt::red));
+                    break;
+                }
+            }
+        }
+    }
+    else{
+        if(!activeTradingSessions.isEmpty()){
+            for(auto session : activeTradingSessions){
+                chart->removeSeries(session);
+            }
+            activeTradingSessions.clear();
+        }
+    }
+    dlg->deleteLater();
+
+}
+
 void CandleStickWidget::mouseMoveEvent(QMouseEvent *pEvent)
 {
 
@@ -1924,6 +2005,62 @@ std::pair<QList<HighLiquid>, QList<LowLiquid> > CandleStickWidget::NSLLiquids(QL
     }
 
     return std::pair(hights, lows);
+}
+
+QList<QAreaSeries *> CandleStickWidget::drawTradingSession(int hourBegin, int hourEnd, QColor color)
+{
+
+    QList<QAreaSeries *> reply;
+    auto sets = klinesSeries->sets();
+
+    auto high = (*sets.begin())->high();
+    auto low = (*sets.begin())->low();
+    for(auto set : sets){
+        if(set->high() > high)
+            high = set->high();
+        if(set->low() < low)
+            low = set->low();
+    }
+
+    auto tsBegin = (*sets.begin())->timestamp();
+    auto tsEnd = (*sets.begin())->timestamp();
+    for(auto set : sets){
+        auto dateTime = QDateTime::fromMSecsSinceEpoch(set->timestamp());
+        if(dateTime.time().hour() == hourBegin && tsBegin == tsEnd){
+            tsBegin = set->timestamp();
+        }
+        if(dateTime.time().hour() == hourEnd && tsBegin != tsEnd){
+            tsEnd = set->timestamp();
+
+            auto upper = new QLineSeries();
+            upper->append(tsBegin, high);
+            upper->append(tsEnd, high);
+
+            auto lower = new QLineSeries();
+            lower->append(tsBegin, low);
+            lower->append(tsEnd, low);
+
+            auto area = new QAreaSeries(upper, lower);
+            QPen pen(color);
+            pen.setWidth(3);
+            pen.setCosmetic(true);
+            area->setPen(pen);
+            QBrush brush;
+            area->setBrush(Qt::Dense7Pattern);
+
+            chart->addSeries(area);
+
+            area->attachAxis(axisX);
+            area->attachAxis(axisY);
+
+            tsEnd = tsBegin;
+
+            reply.append(area);
+
+        }
+    }
+
+    return reply;
 }
 
 bool AbstractLiquid::operator <(const AbstractLiquid &other) const

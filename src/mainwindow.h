@@ -98,6 +98,7 @@ private:
     QPushButton *NSLRGButton;
     QPushButton *NSLLiquids;
     QPushButton *HLTSButton;
+    QPushButton *TradingSessionsButton;
 
     QCheckBox *autocontrolcheckbox;
 
