@@ -198,6 +198,10 @@ private:
     bool hightsAddModeActivated{false};
     bool lowsAddModeActivated{false};
     bool delModeActivated{false};
+    bool rangeModeActivated{false};
+    bool rangeModeFrirstClicked{false};
+    QPointF rangeModeFirstClickMapToValue{0.0, 0.0};
+
     void deactivateAllMods(bool activate = false);
     bool isSomeModeActivated();
 
@@ -208,8 +212,8 @@ private:
 
     void addLow(qreal low, qreal beginTimeStamp, qreal endTimeStamp = -1);
     void addHigh(qreal high, qreal beginTimeStamp, qreal endTimeStamp = -1);
-    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1, const QColor &color = QColor(153, 0, 255));
-    void addArea(AbstractArea area, const QColor &color = QColor(153, 0, 255));
+    void addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp = -1, const QColor &color = QColor(153, 0, 255), const QString &areaName = "");
+    void addArea(AbstractArea area, const QColor &color = QColor(153, 0, 255), const QString &areaName = "");
     void addTakeProfit(qreal price, qreal beginTimeStamp);
     void addStopLoss(qreal price, qreal beginTimeStamp);
     void delLiquid(qreal liquid);

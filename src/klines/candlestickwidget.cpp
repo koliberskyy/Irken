@@ -221,7 +221,7 @@ void CandleStickWidget::autoDrawImbalance()
             }
             if(set != list.end()){
                 imbalance->endtimestamp = (*set)->timestamp();
-                addArea(*imbalance);
+                addArea(*imbalance, QColor(153, 0, 255), "im " + currentTimeframe);
                 //addArea(imbalance->high, imbalance->low, imbalance->timestamp, imbalance->isBuyArea, (*set)->timestamp());
                 imbalance = imbalances.erase(imbalance);
             }
@@ -238,7 +238,7 @@ void CandleStickWidget::autoDrawImbalance()
     for(auto &imbalance : imbalances){
         //addArea(imbalance.high, imbalance.low, imbalance.timestamp, imbalance.isBuyArea);
         imbalance.endtimestamp = -1;
-        addArea(imbalance);
+        addArea(imbalance, QColor(153, 0, 255), "im " + currentTimeframe);
     }
 
 }
@@ -358,7 +358,7 @@ void CandleStickWidget::autoDrawOrderBlocks()
                 }
             }
             if(set != list.end()){
-                addArea(orderblock->high, orderblock->low, orderblock->timestamp, orderblock->isBuyArea, (*set)->timestamp(), QColor(75, 0, 130));
+                addArea(orderblock->high, orderblock->low, orderblock->timestamp, orderblock->isBuyArea, (*set)->timestamp(), QColor(75, 0, 130), "ob " + currentTimeframe);
                 orderblock = orderblocks.erase(orderblock);
             }
             else
@@ -370,7 +370,7 @@ void CandleStickWidget::autoDrawOrderBlocks()
 
     //добавление несобранных  ob
     for(auto &orderblock : orderblocks){
-        addArea(orderblock.high, orderblock.low, orderblock.timestamp, orderblock.isBuyArea, -1, QColor(75, 0, 130));
+        addArea(orderblock.high, orderblock.low, orderblock.timestamp, orderblock.isBuyArea, -1, QColor(75, 0, 130), "ob " + currentTimeframe);
     }
 }
 
@@ -595,7 +595,7 @@ void CandleStickWidget::autoDrawHLTS()
             ls->append(currHighIt->timestamp, currHighIt->count);
 
             QPen pen(Qt::blue);
-            pen.setWidth(3);
+            pen.setWidth(2);
             ls->setPen(pen);
 
             chart->addSeries(ls);
@@ -619,7 +619,7 @@ void CandleStickWidget::autoDrawHLTS()
             ls->append(it.timestamp, it.count);
         }
         QPen pen(Qt::red);
-        pen.setWidth(3);
+        pen.setWidth(2);
         ls->setPen(pen);
 
         chart->addSeries(ls);
@@ -732,6 +732,44 @@ void CandleStickWidget::mousePressEvent(QMouseEvent *pEvent)
         this->setCursor(Qt::OpenHandCursor);
     }
 
+    if(pEvent->button() == Qt::LeftButton && rangeModeActivated && !rangeModeFrirstClicked){
+        rangeModeFirstClickMapToValue = chart->mapToValue(pEvent->pos(), klinesSeries);
+        rangeModeFrirstClicked = true;
+    }
+    else if(pEvent->button() == Qt::LeftButton && rangeModeActivated && rangeModeFrirstClicked){
+        deactivateAllMods();
+        rangeModeFrirstClicked = false;
+        this->setCursor(Qt::ArrowCursor);
+
+        auto rangeModeSecondClickMapToValue = chart->mapToValue(pEvent->pos(), klinesSeries);
+
+        qreal high;
+        qreal low;
+        qreal beginTS;
+        qreal endTs;
+
+        if(rangeModeFirstClickMapToValue.y() > rangeModeSecondClickMapToValue.y()){
+            high = rangeModeFirstClickMapToValue.y();
+            low = rangeModeSecondClickMapToValue.y();
+        }
+        else{
+            low = rangeModeFirstClickMapToValue.y();
+            high = rangeModeSecondClickMapToValue.y();
+        }
+
+        if(rangeModeFirstClickMapToValue.x() > rangeModeSecondClickMapToValue.x()){
+            endTs = rangeModeFirstClickMapToValue.x();
+            beginTS = rangeModeSecondClickMapToValue.x();
+        }
+        else{
+            beginTS = rangeModeFirstClickMapToValue.x();
+            endTs = rangeModeSecondClickMapToValue.x();
+        }
+
+        addArea(high, low, beginTS, true, endTs);
+
+    }
+
 
     QChartView::mousePressEvent(pEvent);
 
@@ -838,6 +876,12 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
         this->setCursor(Qt::ArrowCursor);
         deactivateAllMods();
         marketBuySellInit("Sell");
+    }
+
+    if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_R){
+        deactivateAllMods();
+        this->setCursor(Qt::CrossCursor);
+        rangeModeActivated = true;
     }
 
 }
@@ -1230,7 +1274,9 @@ void CandleStickWidget::showToolTip(const QPointF &point)
     if(!isSomeModeActivated()){
         // поймать сендера, преобразовать в указатель на абстрактную серию, вытащить поле нейм и вставить в тул тип
         // а в series->name() можно запихнуть любые данные в json формате, а здесь их парсить
-        QToolTip::showText(this->cursor().pos(), "Даня лох", nullptr, {}, 1000 * 5);
+        auto snd = (QAreaSeries*)sender();
+
+        QToolTip::showText(this->cursor().pos(), snd->name(), nullptr, {}, 1000 * 60);
     }
 }
 
@@ -1313,7 +1359,8 @@ void CandleStickWidget::deactivateAllMods(bool activate)
     lowsAddModeActivated = activate;
     delModeActivated = activate;
     areaAddModeActivated = activate;
-
+    rangeModeActivated = activate;
+    rangeModeFrirstClicked = activate;
 }
 
 bool CandleStickWidget::isSomeModeActivated()
@@ -1322,7 +1369,8 @@ bool CandleStickWidget::isSomeModeActivated()
             hightsAddModeActivated == true ||
             delModeActivated == true ||
             areaAddModeActivated == true ||
-            lowsAddModeActivated == true;
+            lowsAddModeActivated == true ||
+            rangeModeActivated == true;
 }
 
 void CandleStickWidget::setKlines(const QString &symbol, const QString &interval, const QString &limit)
@@ -1557,7 +1605,7 @@ void CandleStickWidget::addHigh(qreal high, qreal beginTimeStamp, qreal endTimeS
     hightsList[currentSymbol].append(std::move(hl));
 }
 
-void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp, const QColor &color)
+void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, bool isBuyArea, qreal endTimeStamp, const QColor &color, const QString &areaName)
 {
     AbstractArea area;
     area.high = high;
@@ -1606,6 +1654,19 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     area._07Series = series07;
     area.stopLine = seriesStop;
 
+    QJsonObject seriesName;
+    if(!areaName.isEmpty()){
+        seriesName.insert("area", areaName);
+    }
+    seriesName.insert("high", area.high);
+    seriesName.insert("07", area._07());
+    seriesName.insert("05", area._05());
+    seriesName.insert("03", area._03());
+    seriesName.insert("low", area.low);
+    seriesName.insert("rangeHL", area.high - area.low);
+    seriesName.insert("rangeHLpc", 100 * (area.high - area.low) / area.low );
+    series->setName(QJsonDocument(seriesName).toJson(QJsonDocument::JsonFormat::Indented));
+
     QPen pen(color);
     pen.setWidth(1);
     pen.setCosmetic(true);
@@ -1618,13 +1679,12 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
 
     areas[currentSymbol].append(area);
     QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
-    QObject::connect(area.series, SIGNAL(hoverEnter(QString, QPointF, QPointF)), this, SLOT(showToolTip(QString, QPointF, QPointF)));
-
+    QObject::connect(area.series, SIGNAL(clicked(const QPointF &)), this, SLOT(showToolTip(const QPointF &)));
 
 
 }
 
-void CandleStickWidget::addArea(AbstractArea area, const QColor &color)
+void CandleStickWidget::addArea(AbstractArea area, const QColor &color, const QString &areaName)
 {
 
     if(area.endtimestamp < 0){
@@ -1667,6 +1727,19 @@ void CandleStickWidget::addArea(AbstractArea area, const QColor &color)
     area._05Series = series05;
     area._07Series = series07;
     area.stopLine = seriesStop;
+
+    QJsonObject seriesName;
+    if(!areaName.isEmpty()){
+        seriesName.insert("area", areaName);
+    }
+    seriesName.insert("high", area.high);
+    seriesName.insert("07", area._07());
+    seriesName.insert("05", area._05());
+    seriesName.insert("03", area._03());
+    seriesName.insert("low", area.low);
+    seriesName.insert("rangeHL", area.high - area.low);
+    seriesName.insert("rangeHLpc", 100 * (area.high - area.low) / area.low );
+    series->setName(QJsonDocument(seriesName).toJson(QJsonDocument::JsonFormat::Indented));
 
     QPen pen(color);
     pen.setWidth(1);
