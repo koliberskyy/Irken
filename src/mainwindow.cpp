@@ -36,78 +36,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     toolBox->addItem(accTree, "Аккаунты");
     toolBox->addItem(ordTree, "Ордера");
-
-    //graphics control
-    candlestickWidget = new CandleStickWidget();
-
-    symbolComboBox = new QComboBox();
-    for(auto symbol : symbol::utf8){
-        symbolComboBox->addItem(symbol);
-    }
-    QObject::connect(symbolComboBox, &QComboBox::currentTextChanged, this, &MainWindow::graphicControlComboChanged);
-
-    timeframeComboBox = new QComboBox();
-    for(auto timeframe : symbol::timeframes){
-        timeframeComboBox->addItem(timeframe);
-    }
-    QObject::connect(timeframeComboBox, &QComboBox::currentTextChanged, this, &MainWindow::graphicControlComboChanged);
-
-    liquidityButton = new QPushButton("Ликвидности");
-    QObject::connect(liquidityButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawLiquidities);
-
-    imbalanceButton = new QPushButton("Имбалансы");
-    QObject::connect(imbalanceButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawImbalance);
-
-    orderblockButton = new QPushButton("Ордер Блоки");
-    QObject::connect(orderblockButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawOrderBlocks);
-
-    setLeverageButton = new QPushButton("Установить плечо");
-    QObject::connect(setLeverageButton, &QPushButton::pressed, this, &MainWindow::setLeverage);
-
-    NSLButton = new QPushButton("NSL");
-    NSLRGButton = new QPushButton("NSL RG");
-    NSLLiquids = new QPushButton("NSL Liquid");
-    HLTSButton = new QPushButton("HLTS");
-    TradingSessionsButton = new QPushButton("Торговые сессии");
-    QObject::connect(NSLButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSL);
-    QObject::connect(NSLRGButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLRG);
-    QObject::connect(NSLLiquids, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawNSLLiquds);
-    QObject::connect(HLTSButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawHLTS);
-    QObject::connect(TradingSessionsButton, &QPushButton::pressed, candlestickWidget, &CandleStickWidget::autoDrawTradingSessions);
-
-    autocontrolcheckbox = new QCheckBox("Автоконтроль");
-    autocontrolcheckbox->setChecked(false);
-
-    maxLeverageLabel = new QLabel("Максимальное плечо");
-    maxLeverageDSB = new QDoubleSpinBox();
-    maxLeverageDSB->setMaximum(150);
-    maxLeverageDSB->setMinimum(1);
-    maxLeverageDSB->setReadOnly(true);
-    maxLeverageDSB->setValue(instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
-
-
-    auto graphicGrid = new QGridLayout();
-    graphicGrid->addWidget(symbolComboBox, 0, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(timeframeComboBox, 1, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(liquidityButton, 2, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(imbalanceButton, 3, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(orderblockButton, 4, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(autocontrolcheckbox, 5, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(maxLeverageLabel, 6, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(maxLeverageDSB, 7, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(setLeverageButton, 8, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(NSLButton, 9, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(NSLRGButton, 10, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(NSLLiquids, 11, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(HLTSButton, 12, 1, Qt::AlignCenter);
-    graphicGrid->addWidget(TradingSessionsButton, 13, 1, Qt::AlignCenter);
-
-    graphicGrid->addWidget(candlestickWidget, 0, 0, graphicGrid->rowCount() + 10, 1);
-
-    auto graphicWgt = new QWidget();
-    graphicWgt->setLayout(graphicGrid);
-
-    toolBox->addItem(graphicWgt, "График");
     toolBox->addItem(accounts, "Аккаунты(бета)");
 
     //positions
@@ -122,6 +50,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, SIGNAL(timeToUpdateBalances()), accounts, SLOT(updateBalance()));
 
     toolBox->addItem(positions, "Позиции (бета)");
+
+    //klines work spaces
+    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
+    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
+    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
+    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
+
+    for(auto it : klinesWorkSpaces){
+        toolBox->addItem(it, "Гафик");
+    }
 
     createConnctions();
 
@@ -292,31 +230,7 @@ void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
 }
 
 
-void MainWindow::setLeverage()
-{
 
-    auto choosed = AccountItem::showAccountChooseDialog(accounts->list(), "Аккаунты на которых необходимо изменить Плечо");
-
-    if(!choosed.isEmpty()){
-        auto leverage = showLeverageChooseDialog();
-        if(leverage > 0){
-            auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
-            for (auto it : choosed){
-                auto info = bybitInfo();
-                pd->setLabelText(it->get_name() + " " + it->get_name_second());
-
-                do{
-                   info = Methods::setLeverage(symbolComboBox->currentText(), leverage,  it->get_api(), it->get_secret());
-                   if(pd->wasCanceled()){
-                       break;
-                   }
-                }while(info.retCode() != 0 && info.retCode() != 110043);
-                pd->setValue(pd->value() + 1);
-            }
-            pd->deleteLater();
-        }
-    }
-}
 
 void MainWindow::timerChanged()
 {
@@ -352,11 +266,7 @@ void MainWindow::timerChanged()
     }
 }
 
-void MainWindow::graphicControlComboChanged()
-{
-    candlestickWidget->updateKlines(symbolComboBox->currentText(), timeframeComboBox->currentText());
-    maxLeverageDSB->setValue(instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
-}
+
 
 
 void MainWindow::updateAccounts()
@@ -378,17 +288,15 @@ void MainWindow::createConnctions()
     for(auto &it : accountList){
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
-        //legacy orders
-        //connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), it, SLOT(placeOrder(QJsonObject, int)));
     }
-    //new orders
-    connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), accounts, SLOT(shareOrder(QJsonObject, int)));
+    for(auto it : klinesWorkSpaces){
+        connect(it->candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), accounts, SLOT(shareOrder(QJsonObject, int)));
+        connect(this, &MainWindow::timeToUpdateKlines, it->candlestickWidget, &CandleStickWidget::updateCurrentChart);
+    }
 
     connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));
-
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
 
-    connect(this, &MainWindow::timeToUpdateKlines, candlestickWidget, &CandleStickWidget::updateCurrentChart);
 
 }
 
@@ -437,46 +345,5 @@ void MainWindow::displayInfo()
     if(dlg.exec() == QDialog::Accepted){}
 }
 
-double MainWindow::showLeverageChooseDialog()
-{
-    QDialog dlg(this);
-    auto form = new QFormLayout();
 
-
-    auto btn_box = new QDialogButtonBox();
-    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-
-    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    form->addRow(new QLabel("Выбор плеча"));
-
-    //sb_qty
-    auto sb_lev = new QSpinBox();
-    sb_lev->setRange(1, instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
-    sb_lev->setValue(100);
-    sb_lev->setSingleStep(1);
-
-    //sld_qty
-    auto sld_lev = new QSlider(Qt::Horizontal);
-    sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
-    sld_lev->setValue(sb_lev->value());
-    sld_lev->setSingleStep(sb_lev->singleStep());
-    QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
-    QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
-
-    form->addRow(sb_lev);
-    form->addRow(sld_lev);
-    form->addRow(btn_box);
-
-    dlg.setLayout(form);
-
-    // В случае, если пользователь нажал "Ok".
-    if(dlg.exec() == QDialog::Accepted) {
-        return sb_lev->value();
-    }
-
-    return -1;
-}
 

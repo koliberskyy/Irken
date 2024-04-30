@@ -37,6 +37,8 @@ set(PROJECT_SOURCES
 
         src/klines/candlestickwidget.h
         src/klines/candlestickwidget.cpp
+        src/klines/klinesworkingspace.h
+        src/klines/klinesworkingspace.cpp
 
         src/base/abstractitem.h
         src/base/abstractitem.cpp

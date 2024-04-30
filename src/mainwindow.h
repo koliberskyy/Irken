@@ -13,8 +13,8 @@
 
 #include <memory>
 
-#include "candlestickwidget.h"
 
+#include "klinesworkingspace.h"
 #include "account.h"
 #include "accountkunteynir.h"
 #include "positionkunteynir.h"
@@ -35,12 +35,10 @@ public slots:
     void updateAccTree();
     void updateOrdTree(QJsonArray orders);
     void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
-    void setLeverage();
 
 
 private slots:
     void timerChanged();
-    void graphicControlComboChanged();
 
 signals:
     void timeToUpdatePositions(AccountItem*);
@@ -71,33 +69,12 @@ private:
 
     QTreeWidget *accTree;
     QTreeWidget *ordTree;
-    QTreeWidget *smmTree;
 
-    //graphics control pannel
-    CandleStickWidget * candlestickWidget;
-
-    QComboBox *symbolComboBox;
-    QComboBox *timeframeComboBox;
-    QLabel *maxLeverageLabel;
-    QDoubleSpinBox *maxLeverageDSB;
-
-    QPushButton *liquidityButton;
-    QPushButton *imbalanceButton;
-    QPushButton *orderblockButton;
-    QPushButton *setLeverageButton;
-    QPushButton *NSLButton;
-    QPushButton *NSLRGButton;
-    QPushButton *NSLLiquids;
-    QPushButton *HLTSButton;
-    QPushButton *TradingSessionsButton;
-
-    QCheckBox *autocontrolcheckbox;
-
+    std::vector<KlinesWorkingSpace*> klinesWorkSpaces;
     void updateAccounts();
     void createConnctions();
     void displayInfo();
 
-    double showLeverageChooseDialog();
 
 
 };
