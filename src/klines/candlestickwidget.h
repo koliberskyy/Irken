@@ -27,8 +27,9 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QToolTip>
+#include <set>
 #include <unordered_map>
-#include "smartmoney.h"
+#include "requests.h"
 
 struct AbstractLiquid{
     QLineSeries *series{nullptr};
@@ -111,11 +112,37 @@ struct AbstractArea{
         chart->removeSeries(stopLine);    }
 };
 
+class Klines{
+public:
+    /*!
+    Возвращает массив свечей ВСЕХ!!!!!!!
+    */
+    static QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
+
+    /*!
+    принимает ОДНУ свечу!!!!!!!
+    */
+    static QCandlestickSet *toQCandlestickSetPtr(const QJsonArray &kline);
+    static QCandlestickSet toQCandlestickSet(const QJsonArray &kline);
+
+
+    static long long    time    (const QJsonArray &kline)   {return kline[0].toString().toLongLong(); }
+    static double       open    (const QJsonArray &kline)   {return kline[1].toString().toDouble(); }
+    static double       high    (const QJsonArray &kline)   {return kline[2].toString().toDouble(); }
+    static double       low     (const QJsonArray &kline)   {return kline[3].toString().toDouble(); }
+    static double       close   (const QJsonArray &kline)   {return kline[4].toString().toDouble(); }
+
+};
+
+
+// ********************************************* class CandleStickWidget ******************************************************
 class CandleStickWidget : public QChartView
 {
     Q_OBJECT
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
+    static QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
+
 signals:
     void addOrderClicked(QJsonObject order, int leverage);
 public slots:
@@ -206,7 +233,6 @@ private:
     bool isSomeModeActivated();
 
     void setKlines(const QString &symbol, const QString &interval, const QString &limit =  "1000");
-    void setLiquidities(QAbstractAxis *axisX, QAbstractAxis *axisY);
     QAbstractAxis* setAxisX(QCandlestickSeries *klineSeries, QChart *chart);
     QAbstractAxis* setAxisY(QCandlestickSeries *klineSeries, QChart *chart);
 

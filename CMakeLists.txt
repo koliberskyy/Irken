@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.9.1 LANGUAGES CXX)
+project(Irken VERSION 6.10.0 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -35,8 +35,6 @@ set(PROJECT_SOURCES
         src/account/account.h
         src/account/account.cpp
 
-        src/klines/smartmoney.h
-        src/klines/smartmoney.cpp
         src/klines/candlestickwidget.h
         src/klines/candlestickwidget.cpp
 

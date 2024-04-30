@@ -5,40 +5,26 @@ MainWindow::MainWindow(QWidget *parent)
       accounts{new AccountKunteynir()},
       positions{new PositionKunteynir()},
       dateTimeEdit(new QDateTimeEdit()),
-      smmUpdateprogressBar(new QProgressBar),
       timer(new QTimer(this)),
       ordUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateTime(new QDateTime(QDateTime::currentDateTime())),
-      smmUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       chartUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateFluencySec(new qint64(3)),
       ordUpdateFluencySec(new qint64(10)),
-      smmUpdateFluencySec(new qint64(300)),
       chartUpdateFluencySec(new qint64(3)),
       accTree(new QTreeWidget()),
-      posTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
-      smmTree(new QTreeWidget()),
       toolBox(new QToolBox())
 
 {
-
-
     //обновляем фильтры перед началом работы приложения
     auto filters = instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
-
-    smartMoney= (new SmartMoney());
 
     //status bar
     auto bar = statusBar();
     dateTimeEdit->setReadOnly(true);
     dateTimeEdit->setDisplayFormat("dd-MM-yyyy HH:mm:ss");
     bar->addWidget(dateTimeEdit);
-
-    bar->addWidget(smmUpdateprogressBar);
-    smmUpdateprogressBar->setRange(0, 100);
-    connect(smartMoney, SIGNAL(updateProgressChanged(int)), smmUpdateprogressBar, SLOT(setValue(int)));
-
     bar->show();
     timer->start(1000);
 
@@ -46,14 +32,10 @@ MainWindow::MainWindow(QWidget *parent)
     updateAccounts();
 
     updateAccTree();
-    updatePosTree(QJsonArray());
     updateOrdTree(QJsonArray());
-    updateSmmTree(QJsonArray());
 
     toolBox->addItem(accTree, "Аккаунты");
-    toolBox->addItem(posTree,  "Позиции");
     toolBox->addItem(ordTree, "Ордера");
-    toolBox->addItem(smmTree, "SmartMoney");
 
     //graphics control
     candlestickWidget = new CandleStickWidget();
@@ -158,7 +140,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
 MainWindow::~MainWindow()
 {
-
 }
 
 void MainWindow::updateAccTree()
@@ -186,92 +167,6 @@ void MainWindow::updateAccTree()
     }
 }
 
-void MainWindow::updatePosTree(QJsonArray positions)
-{
-    auto accPtr = (Account*)sender();
-    if(accPtr == nullptr){
-        posTree->clear();
-        QStringList posColumns{"Имя", "Фамилия", "Символ", "Лонг/шорт", "Pnl", "ТВХ", "Марк.", "ТП", "СЛ", "Маржа", "Плечо", "Обновлено", "api"};
-        posTree->setColumnCount(posColumns.size());
-        posTree->setHeaderLabels(posColumns);
-        posTree->hideColumn(posTree->columnCount()-1);
-        for(auto &it : accountList){
-            auto tmp = it->toTreeItem();
-            posTree->addTopLevelItem(new QTreeWidgetItem(QStringList{tmp.text(0), tmp.text(1), "" , "", "", "", "", "", "", "", "", "", tmp.text(tmp.columnCount()-1)}));
-        }
-        for(auto &it : accountList){
-            it->updatePositions();
-        }
-    }
-    else{
-        auto itemNew = accPtr->toTreeItem();
-        auto list = posTree->findItems(itemNew.text(itemNew.columnCount() - 1), Qt::MatchFixedString, posTree->columnCount() - 1);
-        if(list.size() > 0){
-            auto item = (*list.begin());
-
-            QList<QTreeWidgetItem *> undefinedChildrens;
-            for(auto i = 0; i < item->childCount(); i++){
-                undefinedChildrens.append(item->child(i));
-            }
-            for(auto it : positions){
-
-                auto obj = it.toObject();
-                QStringList childList;
-                childList.append("");//пропускаем колонки имя, фамилия
-                childList.append("");
-                childList.append(obj["symbol"].toString());
-                childList.append(obj["side"].toString());
-                childList.append(Position::unrealizedPnlPercentQString(obj));
-                childList.append(obj["avgPrice"].toString());
-                childList.append(obj["markPrice"].toString());
-                childList.append(obj["takeProfit"].toString());
-                childList.append(obj["stopLoss"].toString());
-                childList.append(obj["size"].toString());
-                childList.append(obj["leverage"].toString());
-
-                time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
-                std::tm bt = *std::localtime(&timer);
-                std::stringstream ss;
-                ss << std::put_time(&bt, "%H:%M:%S");
-                childList.append(QString::fromStdString(ss.str()));
-
-                childList.append(accPtr->api());
-
-                auto isFinded = false;
-                //изменяем существующие
-                for(auto it_undef = undefinedChildrens.begin(); it_undef != undefinedChildrens.end(); it_undef++){
-                    auto child = *it_undef;
-                    //еслм ордер существует
-                    if(obj["avgPrice"] == child->text(5)){
-                        isFinded = true;
-                        int j = 0;
-                        //заменяем отличающиеся поля
-                        for(auto &cl_it : childList){
-                            if(cl_it != child->text(j)){
-                                child->setText(j, cl_it);
-                            }
-                            j++;
-                        }
-                        //удаляем из списка устаревших
-                        it_undef = undefinedChildrens.erase(it_undef);
-                        break;
-                    }
-                }
-
-
-                //если одрдер с сервера не найден среди ордеров из памяти добавляем его
-                if(!isFinded){
-                    item->addChild(new QTreeWidgetItem(childList));
-                }
-            }
-            //удаляем устаревшие
-            for(auto it : undefinedChildrens){
-                item->removeChild(it);
-            }
-            //accPtr->updatePositions();
-        }
-    }
-}
 
 void MainWindow::updateOrdTree(QJsonArray orders)
 {
@@ -360,65 +255,6 @@ void MainWindow::updateOrdTree(QJsonArray orders)
     }
 }
 
-void MainWindow::updateSmmTree(QJsonArray orders)
-{
-    auto senderPtr = (SmartMoney*)sender();
-    if(senderPtr == nullptr){
-        smmTree->clear();
-        QStringList posColumns{"Символ", "Лонг/шорт", "ТВХ", "ТП", "СЛ", "Обновлено", "id"};
-        smmTree->setColumnCount(posColumns.size());
-        smmTree->setHeaderLabels(posColumns);
-
-    }
-    else{
-        auto tmp = smartMoney->getOrders();
-
-        QList<QJsonObject> orderList;
-        for(auto it: *tmp){
-            orderList.append(it.second);
-        }
-
-        smmTree->clear();
-        for (auto it : orderList){
-            QStringList list;
-            list.append(it["symbol"].toString());
-            list.append(it["side"].toString());
-            list.append(it["price"].toString());
-            list.append(it["takeProfit"].toString());
-            list.append(it["stopLoss"].toString());
-
-            time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
-            std::tm bt = *std::localtime(&timer);
-            std::stringstream ss;
-            ss << std::put_time(&bt, "%H:%M:%S");
-            list.append(QString::fromStdString(ss.str()));
-
-            smmTree->addTopLevelItem(new QTreeWidgetItem(list));
-        }
-        if(orderList.isEmpty()){
-            QStringList list;
-            list.append("");
-            list.append("");
-            list.append("");
-            list.append("");
-            list.append("");
-
-            time_t timer{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())};
-            std::tm bt = *std::localtime(&timer);
-            std::stringstream ss;
-            ss << std::put_time(&bt, "%H:%M:%S");
-            list.append(QString::fromStdString(ss.str()));
-
-            smmTree->addTopLevelItem(new QTreeWidgetItem(list));
-        }
-
-
-        for(auto &it:accountList){
-            it->refreshOrderList(orderList);
-        }
-    }
-}
-
 void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
 {
     auto symbol = item->text(2);
@@ -455,98 +291,6 @@ void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
     }
 }
 
-void MainWindow::posItemDoubleClicked(QTreeWidgetItem *item, int column)
-{
-    //        QStringList posColumns{"Имя", "Фамилия", "Символ", "Лонг/шорт", "Pnl", "ТВХ", "Марк.", "ТП", "СЛ", "Маржа", "Плечо", "Обновлено", "api"};
-
-    //prepare pos
-    auto symbol = item->text(2);
-    auto side = item->text(3);
-    auto size = item->text(9);//different for every acc
-    auto tmp = item->text(4);
-    auto iter = std::find(tmp.begin(), tmp.end(), ',');
-    if(iter != tmp.end())
-        *iter = '.';
-
-    auto pnl = tmp.toDouble();
-
-
-    QJsonObject pos;
-
-    pos.insert("symbol", symbol);
-    pos.insert("side", side);
-
-    QDialog dlg(this);
-    auto form = new QFormLayout();
-
-
-    auto btn_box = new QDialogButtonBox();
-    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-    auto cb_stopBU = new QCheckBox("Стоп б/у");
-    auto cb_close = new QCheckBox("Закрыть");
-    cb_stopBU->setChecked(true);
-    cb_close->setChecked(false);
-
-    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    form->addRow(new QLabel("Закрыть позицию?"));
-
-    //sb_qty
-    auto sb_qty = new QSpinBox();
-    sb_qty->setRange(0, 100);
-    sb_qty->setValue(25);
-    sb_qty->setSingleStep(1);
-
-    //sld_qty
-    auto sld_qty = new QSlider(Qt::Horizontal);
-    sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
-    sld_qty->setValue(sb_qty->value());
-    sld_qty->setSingleStep(sb_qty->singleStep());
-    QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
-    QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
-
-    form->addRow(cb_stopBU);
-    form->addRow(cb_close);
-    form->addRow(new QLabel("%"), sb_qty);
-    form->addRow(sld_qty);
-    form->addRow(btn_box);
-
-    dlg.setLayout(form);
-
-    // В случае, если пользователь нажал "Ok".
-    if(dlg.exec() == QDialog::Accepted) {
-
-        auto list = posTree->findItems(item->text(2), Qt::MatchRecursive, 2);
-
-        for(auto it : accountList){
-            for(auto curr_item : list){
-            if(curr_item->text(curr_item->columnCount() - 1) == it->api()){
-                pos["size"] = curr_item->text(9);
-                pos["avgPrice"] = curr_item->text(5);
-                pos["stopLoss"] = curr_item->text(8);
-                pos["takeProfit"] = curr_item->text(7);
-
-                double close_pc;
-
-                if(cb_close->isChecked())
-                    close_pc = 100;
-                else
-                    close_pc = sb_qty->value();
-
-                if(cb_stopBU->isChecked() && pos["avgPrice"].toString().toDouble() != pos["stopLoss"].toString().toDouble() && pnl > 0){
-                    it->setTradingStop(pos);
-                }
-
-                if(close_pc != 0){
-                    it->reducePosition(pos, close_pc);
-                }
-            }
-            }
-        }
-    }
-}
 
 void MainWindow::setLeverage()
 {
@@ -581,9 +325,6 @@ void MainWindow::timerChanged()
 
     //update pos
     if(posUpdateTime->secsTo(current) > *posUpdateFluencySec && positionControlActivated){
-//        for(auto &it : accountList){
-//            it->updatePositions(autocontrolcheckbox->isChecked());
-//        }
         posUpdateTime->setDate(current.date());
         posUpdateTime->setTime(current.time());
 
@@ -618,8 +359,6 @@ void MainWindow::graphicControlComboChanged()
 }
 
 
-
-
 void MainWindow::updateAccounts()
 {
     if(!accountList.isEmpty())
@@ -638,23 +377,18 @@ void MainWindow::createConnctions()
 {
     for(auto &it : accountList){
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
-        connect(it, SIGNAL(positionsUpdated(QJsonArray)), this, SLOT(updatePosTree(QJsonArray)));
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
         //legacy orders
         //connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), it, SLOT(placeOrder(QJsonObject, int)));
     }
     //new orders
     connect(candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), accounts, SLOT(shareOrder(QJsonObject, int)));
-    connect(smartMoney, SIGNAL(updated(QJsonArray)), this, SLOT(updateSmmTree(QJsonArray)));
 
     connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));
-    connect(posTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(posItemDoubleClicked(QTreeWidgetItem *, int)));
-
 
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
 
     connect(this, &MainWindow::timeToUpdateKlines, candlestickWidget, &CandleStickWidget::updateCurrentChart);
-
 
 }
 

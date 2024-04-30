@@ -125,8 +125,6 @@ void CandleStickWidget::autoDrawLiquidities()
         for(auto low : lows){
             addLow(low.count, low.timestamp);
         }
-
-
     }
 }
 
@@ -156,7 +154,6 @@ void CandleStickWidget::autoDrawImbalance()
         if(isBuyArea){
             voidImbalance = (*next)->low() - (*prev)->high();
             //middle = (*prev)->high() + voidImbalance/2;
-            middle = (*curr)->open() + body/2;
 
             if(voidImbalance > size_prev /*&& middle < (*next)->low()*/
             || voidImbalance > size_next /*&& middle > (*prev)->high()*/){
@@ -178,7 +175,6 @@ void CandleStickWidget::autoDrawImbalance()
         else{
             voidImbalance = (*prev)->low() - (*next)->high();
             //middle = (*next)->low() + voidImbalance/2;
-            middle = (*curr)->close() + body/2;
 
             if(voidImbalance > size_prev /*&& middle > (*next)->high()*/
             || voidImbalance > size_next /*&& middle < (*prev)->low()*/){
@@ -404,6 +400,7 @@ void CandleStickWidget::autoDrawNSL()
 
         lineSeries1->append(set->timestamp(), set->low());
         lineSeries1->append(set->timestamp(), min);
+        lineSeries1->setUseOpenGL(true);
 
         chart->addSeries(lineSeries1);
 
@@ -446,6 +443,7 @@ void CandleStickWidget::autoDrawNSLRG()
 
             lineSeries1->append(set->timestamp(), set->low());
             lineSeries1->append(set->timestamp(), min);
+            lineSeries1->setUseOpenGL(true);
 
             chart->addSeries(lineSeries1);
 
@@ -593,6 +591,7 @@ void CandleStickWidget::autoDrawHLTS()
             ls->append(lowIt->timestamp, lowIt->count);
             ls->append(nextHighIt->timestamp, nextHighIt->count);
             ls->append(currHighIt->timestamp, currHighIt->count);
+            ls->setUseOpenGL(true);
 
             QPen pen(Qt::blue);
             pen.setWidth(2);
@@ -621,6 +620,7 @@ void CandleStickWidget::autoDrawHLTS()
         QPen pen(Qt::red);
         pen.setWidth(2);
         ls->setPen(pen);
+        ls->setUseOpenGL(true);
 
         chart->addSeries(ls);
         ls->attachAxis(axisX);
@@ -845,16 +845,22 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
     if(QKeyCombination(Qt::Modifiers({Qt::CTRL, Qt::SHIFT}), Qt::Key_D) == event->keyCombination()){
         this->setCursor(Qt::ArrowCursor);
         deactivateAllMods();
+
+        auto serieses = chart->series();
+        for(auto series : serieses){
+            if(series->type() != QCandlestickSeries::SeriesTypeCandlestick){
+                chart->removeSeries(series);
+            }
+        }
         hightsList.clear();
         lowsList.clear();
         areas.clear();
         stopLoss.clear();
         takeProfit.clear();
-        for(auto series : chart->series()){
-            if(series->type() != QCandlestickSeries::SeriesTypeCandlestick){
-                chart->removeSeries(series);
-            }
-        }
+
+        //костыль для удаления серий использующих opengl
+        chart->resize(chart->size() + QSize(1, 1));
+        chart->resize(chart->size() - QSize(1, 1));
     }
     if(event->key() == Qt::Key_Escape){
         if(this->cursor() == Qt::CrossCursor){
@@ -1026,6 +1032,10 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
             chart->removeSeries(takeProfit.series);
             takeProfit.clear();
         }
+
+        //костыль для удаления серий использующих opengl
+        chart->resize(chart->size() + QSize(1, 1));
+        chart->resize(chart->size() - QSize(1, 1));
     }
 
 
@@ -1047,6 +1057,11 @@ void CandleStickWidget::areaClicked()
                 QObject::disconnect(area.series, SIGNAL(clicked(const QPointF)), this, SLOT(areaClicked()));
             }
             deactivateAllMods();
+
+            //костыль для удаления серий использующих opengl
+            chart->resize(chart->size() + QSize(1, 1));
+            chart->resize(chart->size() - QSize(1, 1));
+
             this->setCursor(Qt::ArrowCursor);
         }
     }
@@ -1384,7 +1399,6 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
             klinesSeries->clear();
         }
 
-
         if(chart == nullptr)
             chart = new QChart();
         else{
@@ -1392,6 +1406,8 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
             chart->removeAllSeries();
             stopLoss.clear();
             takeProfit.clear();
+            hightsList.clear();
+            lowsList.clear();
             chart->removeAxis(chart->axes(Qt::Horizontal).at(0));
             chart->removeAxis(chart->axes(Qt::Vertical).at(0));
         }
@@ -1399,7 +1415,6 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
 
         klinesSeries = new QCandlestickSeries();
         auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));
-
         klinesSeries->setUseOpenGL(true);
         klinesSeries->setIncreasingColor(QColor(Qt::green));
         klinesSeries->setDecreasingColor(QColor(Qt::red));
@@ -1420,64 +1435,32 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
             }
         }
         else{
-            QJsonArray tmp;
-            auto i_limit = limit.toInt() - 1000;
-
-            while(tmp.isEmpty())
-                    tmp = Klines::downloadKlines(symbol, interval, "1000");
-
-            auto timeBegin = Klines::toQCandlestickSet(tmp.last().toArray()).timestamp();
-            auto timeEnd = Klines::toQCandlestickSet(tmp.begin()->toArray()).timestamp();
-            klines.append(tmp);
-
-            while(i_limit > 0){
-                QJsonArray tmpppppppppppppp;
-                while(tmpppppppppppppp.isEmpty()){
-                    tmpppppppppppppp = Klines::downloadKlines(symbol, interval, "1000", QString::fromStdString(std::to_string(timeBegin - 2*(timeEnd - timeBegin))), QString::fromStdString(std::to_string(timeBegin)));
-                }
-                timeBegin = Klines::toQCandlestickSet(tmpppppppppppppp.last().toArray()).timestamp();
-                timeEnd = Klines::toQCandlestickSet(tmpppppppppppppp.begin()->toArray()).timestamp();
-                i_limit -= 1000;
-                klines.push_back(tmp);
-            }
-            for(auto it:klines){
-                auto arr = it.toArray();
-                int i = arr.size() -1;
-                while (i > (-1) ){
-                    auto set = Klines::toQCandlestickSetPtr(arr.at(i).toArray());
-                    if (set) {
-                        klinesSeries->append(set);
-                    }
-                    i--;
-                }
-
-            }
-
+            std::cout << "\n download klines error: limit must be less then 1001\n";
         }
-
 
         chart->addSeries(klinesSeries);
         chart->legend()->hide();
         chart->setTitle(symbol + ", " + interval);
-        //chart->setAnimationOptions(QChart::SeriesAnimations);
 
         axisX = setAxisX(klinesSeries, chart);
         axisY = setAxisY(klinesSeries, chart);
-
-        setLiquidities(axisX, axisY);
 
         addExistSerieses();
 
         setChart(chart);
     }
     else{
-        currentTimeframe = interval;
-        chart->zoomReset();
-        klinesSeries->clear();
-        QJsonArray klines;
-
+        chart->removeAllSeries();
         chart->removeAxis(chart->axes(Qt::Horizontal).at(0));
         chart->removeAxis(chart->axes(Qt::Vertical).at(0));
+        currentTimeframe = interval;
+        chart->zoomReset();
+
+        klinesSeries = new QCandlestickSeries();
+        auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));        QJsonArray klines;
+        klinesSeries->setUseOpenGL(true);
+        klinesSeries->setIncreasingColor(QColor(Qt::green));
+        klinesSeries->setDecreasingColor(QColor(Qt::red));
 
         while(klines.isEmpty())
                 klines = Klines::downloadKlines(symbol, interval, limit);
@@ -1491,44 +1474,17 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
             i--;
         }
 
+        chart->addSeries(klinesSeries);
         chart->setTitle(symbol + ", " + interval);
         chart->legend()->hide();
-
 
         axisX = setAxisX(klinesSeries, chart);
         axisY = setAxisY(klinesSeries, chart);
 
-        for(auto it : hightsList[currentSymbol]){
-            it.series->attachAxis(axisX);
-            it.series->attachAxis(axisY);
-        }
-        for(auto it : lowsList[currentSymbol]){
-            it.series->attachAxis(axisX);
-            it.series->attachAxis(axisY);
-        }
-        for(auto &it : areas[currentSymbol]){
-            it.attachAxis(axisX, axisY);
-        }
-
-        //this->update();
+        addExistSerieses();
 
     }
 
-}
-
-void CandleStickWidget::setLiquidities(QAbstractAxis *axisX, QAbstractAxis *axisY)
-{
-   // auto lineSeries = new QLineSeries();
-
-
-
-    for(auto &it : klinesSeries->sets()){
-    //работать здесь
-        auto tmpAreas = areas;
-        auto tmpHigh = hightsList;
-        auto tmpLows = lowsList;
-
-    }
 }
 
 QAbstractAxis* CandleStickWidget::setAxisX(QCandlestickSeries *klineSeries, QChart *chart)
@@ -1567,6 +1523,7 @@ void CandleStickWidget::addLow(qreal low, qreal beginTimeStamp, qreal endTimeSta
 
     lineSeries->append(beginTimeStamp, low);
     lineSeries->append(endTimeStamp, low);
+    lineSeries->setUseOpenGL(true);
 
     chart->addSeries(lineSeries);
 
@@ -1591,6 +1548,7 @@ void CandleStickWidget::addHigh(qreal high, qreal beginTimeStamp, qreal endTimeS
 
     lineSeries->append(beginTimeStamp, high);
     lineSeries->append(endTimeStamp, high);
+    lineSeries->setUseOpenGL(true);
 
     chart->addSeries(lineSeries);
 
@@ -1626,25 +1584,31 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
 
     series0->append(beginTimeStamp, high);
     series0->append(endTimeStamp, high);
+    series0->setUseOpenGL(true);
 
     series1->append(beginTimeStamp, low);
     series1->append(endTimeStamp, low);
+    series1->setUseOpenGL(true);
 
     series07->append(beginTimeStamp, area._07());
     series07->append(endTimeStamp, area._07());
     series07->setColor(QColor(255, 116, 23));
+    series07->setUseOpenGL(true);
 
     series05->append(beginTimeStamp, area._05());
     series05->append(endTimeStamp, area._05());
     series05->setColor(QColor(255, 116, 23));
+    series05->setUseOpenGL(true);
 
     series03->append(beginTimeStamp, area._03());
     series03->append(endTimeStamp, area._03());
     series03->setColor(QColor(255, 116, 23));
+    series03->setUseOpenGL(true);
 
     seriesStop->append(beginTimeStamp, area._stop());
     seriesStop->append(endTimeStamp, area._stop());
     seriesStop->setColor(Qt::red);
+    seriesStop->setUseOpenGL(true);
 
     auto series = new QAreaSeries(series0, series1);
 
@@ -1672,6 +1636,7 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     pen.setCosmetic(true);
     series->setPen(pen);
     series->setBrush(Qt::Dense7Pattern);
+    series->setUseOpenGL(true);
 
     area.addToChart(chart);
 
@@ -1700,25 +1665,31 @@ void CandleStickWidget::addArea(AbstractArea area, const QColor &color, const QS
 
     series0->append(area.timestamp, area.high);
     series0->append(area.endtimestamp, area.high);
+    series0->setUseOpenGL(true);
 
     series1->append(area.timestamp, area.low);
     series1->append(area.endtimestamp, area.low);
+    series1->setUseOpenGL(true);
 
     series07->append(area.timestamp, area._07());
     series07->append(area.endtimestamp, area._07());
     series07->setColor(QColor(255, 116, 23));
+    series07->setUseOpenGL(true);
 
     series05->append(area.timestamp, area._05());
     series05->append(area.endtimestamp, area._05());
     series05->setColor(QColor(255, 116, 23));
+    series05->setUseOpenGL(true);
 
     series03->append(area.timestamp, area._03());
     series03->append(area.endtimestamp, area._03());
     series03->setColor(QColor(255, 116, 23));
+    series03->setUseOpenGL(true);
 
     seriesStop->append(area.timestamp, area._stop());
     seriesStop->append(area.endtimestamp, area._stop());
     seriesStop->setColor(Qt::red);
+    seriesStop->setUseOpenGL(true);
 
     auto series = new QAreaSeries(series0, series1);
 
@@ -1746,13 +1717,13 @@ void CandleStickWidget::addArea(AbstractArea area, const QColor &color, const QS
     pen.setCosmetic(true);
     series->setPen(pen);
     series->setBrush(Qt::Dense7Pattern);
+    series->setUseOpenGL(true);
 
     area.addToChart(chart);
 
     area.attachAxis(axisX, axisY);
 
     areas[currentSymbol].append(area);
-
 
     QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
     QObject::connect(area.series, SIGNAL(clicked(const QPointF &)), this, SLOT(showToolTip(const QPointF &)));
@@ -2108,10 +2079,12 @@ QList<QAreaSeries *> CandleStickWidget::drawTradingSession(int hourBegin, int ho
             auto upper = new QLineSeries();
             upper->append(tsBegin, high);
             upper->append(tsEnd, high);
+            upper->setUseOpenGL(true);
 
             auto lower = new QLineSeries();
             lower->append(tsBegin, low);
             lower->append(tsEnd, low);
+            lower->setUseOpenGL(true);
 
             auto area = new QAreaSeries(upper, lower);
             QPen pen(color);
@@ -2120,6 +2093,7 @@ QList<QAreaSeries *> CandleStickWidget::drawTradingSession(int hourBegin, int ho
             area->setPen(pen);
             QBrush brush;
             area->setBrush(Qt::Dense7Pattern);
+            area->setUseOpenGL(true);
 
             chart->addSeries(area);
 
@@ -2144,4 +2118,55 @@ bool AbstractLiquid::operator <(const AbstractLiquid &other) const
 bool AbstractLiquid::operator ==(const AbstractLiquid &other) const
 {
     return timestamp == other.timestamp;
+}
+
+
+
+//klines**************************
+QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
+{
+    QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=" +limit.toUtf8());
+
+    if(!begin.isEmpty() && !end.isEmpty())
+        query.append("&start=" + begin.toUtf8() + "&end=" + end.toUtf8());
+    else if((begin.isEmpty() && !end.isEmpty()) || (!begin.isEmpty() && end.isEmpty())){
+        std::cout << "ERROR in downloadKlines: begin must not be empty when end is not empty or vice";
+        return QJsonArray();
+    }
+
+    QString url("https://api.bybit.com/v5/market/mark-price-kline?");
+
+    auto customReplyParser = [](const QUrl &url, const QByteArray &data) ->QJsonObject
+        {
+            auto obj = QJsonDocument::fromJson(data).object();
+            auto retCode = obj["retCode"].toInt();
+            if(retCode != 0){
+                instruments::replyError(url, data);
+                return QJsonObject();
+            }
+            return std::move(obj);
+        };
+
+    auto obj = Requests::get(url, query, "klines-" + symbol + "-" + interval, 10000, customReplyParser);
+
+    if(!obj.isEmpty()){
+        auto result = obj["result"].toObject();
+        auto list = result["list"].toArray();
+
+        if(!list.empty()){
+            //выдаем дальше
+            return std::move(list);
+        }
+    }
+    return QJsonArray();
+}
+
+QCandlestickSet *Klines::toQCandlestickSetPtr(const QJsonArray &kline)
+{
+    return new QCandlestickSet(open(kline), high(kline), low(kline), close(kline), time(kline));
+}
+
+QCandlestickSet Klines::toQCandlestickSet(const QJsonArray &kline)
+{
+    return QCandlestickSet(open(kline), high(kline), low(kline), close(kline), time(kline));
 }

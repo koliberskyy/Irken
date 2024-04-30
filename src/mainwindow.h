@@ -16,7 +16,6 @@
 #include "candlestickwidget.h"
 
 #include "account.h"
-#include "smartmoney.h"
 #include "accountkunteynir.h"
 #include "positionkunteynir.h"
 
@@ -24,7 +23,6 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
     QList<Account*> accountList;
-    SmartMoney *smartMoney;
 
 public:
     MainWindow(QWidget *parent = nullptr);
@@ -35,11 +33,8 @@ protected:
 
 public slots:
     void updateAccTree();
-    void updatePosTree(QJsonArray positions);
     void updateOrdTree(QJsonArray orders);
-    void updateSmmTree(QJsonArray orders);
     void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
-    void posItemDoubleClicked(QTreeWidgetItem *item, int column);
     void setLeverage();
 
 
@@ -64,21 +59,17 @@ private:
 
     QDateTimeEdit *dateTimeEdit;
     QTimer *timer;
-    QProgressBar *smmUpdateprogressBar;
 
     std::unique_ptr<QDateTime> posUpdateTime;
     std::unique_ptr<QDateTime> ordUpdateTime;
-    std::unique_ptr<QDateTime> smmUpdateTime;
     std::unique_ptr<QDateTime> chartUpdateTime;
 
 
     std::unique_ptr<qint64> posUpdateFluencySec;
     std::unique_ptr<qint64> ordUpdateFluencySec;
-    std::unique_ptr<qint64> smmUpdateFluencySec;
     std::unique_ptr<qint64> chartUpdateFluencySec;
 
     QTreeWidget *accTree;
-    QTreeWidget *posTree;
     QTreeWidget *ordTree;
     QTreeWidget *smmTree;
 
