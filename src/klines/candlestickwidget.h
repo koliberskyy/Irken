@@ -142,7 +142,7 @@ class CandleStickWidget : public QChartView
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
     static QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
-
+    QString get_currentSymbol() const;
 signals:
     void addOrderClicked(QJsonObject order, int leverage);
 public slots:

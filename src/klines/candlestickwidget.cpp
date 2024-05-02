@@ -7,6 +7,10 @@ CandleStickWidget::CandleStickWidget(QWidget *parent)
 
 }
 
+QString CandleStickWidget::get_currentSymbol() const{
+    return currentSymbol;
+}
+
 void CandleStickWidget::updateKlines(const QString &symbol, const QString &interval, const QString &limit)
 {
     klinesUpdated = false;
@@ -542,6 +546,10 @@ void CandleStickWidget::autoDrawHLTS()
     for(auto it : hightsList[currentSymbol]){
         hights.insert(it);
     }
+    for(auto it : lowsList[currentSymbol]){
+        chart->removeSeries(it.series);
+    }
+    lowsList[currentSymbol].clear();
 
     if(!hights.empty()){
 
@@ -579,6 +587,7 @@ void CandleStickWidget::autoDrawHLTS()
         for(auto it : lowsList[currentSymbol]){
             lows.insert(it);
         }
+
         //рисуем треугольники
         auto lowIt = lows.begin();
         currHighIt = hights.begin();
@@ -586,20 +595,33 @@ void CandleStickWidget::autoDrawHLTS()
         nextHighIt++;
 
         while(lowIt != lows.end() && nextHighIt != hights.end()){
-            auto ls = new QLineSeries();
-            ls->append(currHighIt->timestamp, currHighIt->count);
-            ls->append(lowIt->timestamp, lowIt->count);
-            ls->append(nextHighIt->timestamp, nextHighIt->count);
-            ls->append(currHighIt->timestamp, currHighIt->count);
-            ls->setUseOpenGL(true);
+            auto greenLS = new QLineSeries();
+            auto redLS = new QLineSeries();
 
-            QPen pen(Qt::blue);
-            pen.setWidth(2);
-            ls->setPen(pen);
+            greenLS->append(lowIt->timestamp, lowIt->count);
+            greenLS->append(nextHighIt->timestamp, nextHighIt->count);
 
-            chart->addSeries(ls);
-            ls->attachAxis(axisX);
-            ls->attachAxis(axisY);
+            QPen greenPen(Qt::green);
+            greenPen.setWidth(3);
+            greenLS->setPen(greenPen);
+            greenLS->setUseOpenGL(true);
+
+            redLS->append(currHighIt->timestamp, currHighIt->count);
+            redLS->append(lowIt->timestamp, lowIt->count);
+
+            QPen redPen(Qt::red);
+            redPen.setWidth(3);
+            redLS->setPen(redPen);
+            redLS->setUseOpenGL(true);
+
+            chart->addSeries(greenLS);
+            greenLS->attachAxis(axisX);
+            greenLS->attachAxis(axisY);
+
+            chart->addSeries(redLS);
+            redLS->attachAxis(axisX);
+            redLS->attachAxis(axisY);
+
 
             lowIt++;
             currHighIt++;
@@ -610,24 +632,48 @@ void CandleStickWidget::autoDrawHLTS()
         for(auto it: lowsList[currentSymbol]){
             chart->removeSeries(it.series);
         }
-        lowsList.clear();
+        lowsList[currentSymbol].clear();
+
+        //соединяем  xaи
+        auto gls = new QLineSeries();
+        for(auto it : hights){
+            gls->append(it.timestamp, it.count);
+        }
 
         //соединяем новые лои
-        auto ls = new QLineSeries();
+        auto rls = new QLineSeries();
         for(auto it : lows){
-            ls->append(it.timestamp, it.count);
+            rls->append(it.timestamp, it.count);
         }
-        QPen pen(Qt::red);
+        QPen pen(Qt::blue);
         pen.setWidth(2);
-        ls->setPen(pen);
-        ls->setUseOpenGL(true);
+        gls->setPen(pen);
+        gls->setUseOpenGL(true);
 
-        chart->addSeries(ls);
-        ls->attachAxis(axisX);
-        ls->attachAxis(axisY);
+        chart->addSeries(gls);
+        gls->attachAxis(axisX);
+        gls->attachAxis(axisY);
+
+        rls->setPen(pen);
+        rls->setUseOpenGL(true);
+
+        chart->addSeries(rls);
+        rls->attachAxis(axisX);
+        rls->attachAxis(axisY);
+
+        klinesSeries->setIncreasingColor(Qt::white);
+        klinesSeries->setDecreasingColor(Qt::black);
 
 
+        //удаление хаев
+
+        for(auto it : hightsList[currentSymbol]){
+            chart->removeSeries(it.series);
+        }
+        hightsList[currentSymbol].clear();
     }
+
+
 }
 
 void CandleStickWidget::autoDrawTradingSessions()
@@ -861,6 +907,9 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
         //костыль для удаления серий использующих opengl
         chart->resize(chart->size() + QSize(1, 1));
         chart->resize(chart->size() - QSize(1, 1));
+
+        klinesSeries->setIncreasingColor(Qt::green);
+        klinesSeries->setDecreasingColor(Qt::red);
     }
     if(event->key() == Qt::Key_Escape){
         if(this->cursor() == Qt::CrossCursor){
@@ -1527,7 +1576,7 @@ void CandleStickWidget::addLow(qreal low, qreal beginTimeStamp, qreal endTimeSta
 
     chart->addSeries(lineSeries);
 
-    lineSeries->setColor(QColor(0, 0, 255, 50));
+    lineSeries->setColor(QColor(139, 0, 139));
     lineSeries->attachAxis(axisX);
     lineSeries->attachAxis(axisY);
 
@@ -1552,7 +1601,7 @@ void CandleStickWidget::addHigh(qreal high, qreal beginTimeStamp, qreal endTimeS
 
     chart->addSeries(lineSeries);
 
-    lineSeries->setColor(QColor(0, 0, 255, 50));
+    lineSeries->setColor(QColor(139, 0, 139));
     lineSeries->attachAxis(axisX);
     lineSeries->attachAxis(axisY);
 

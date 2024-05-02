@@ -25,6 +25,7 @@ class AbstractItem : public QWidget
 public:
     explicit AbstractItem(QWidget *parent = nullptr);
     virtual void updateData(const QJsonObject &obj = QJsonObject()) = 0;
+    QJsonObject get_data() const;
 
     virtual int itemHeight();
     const static int oneItemHeight{60};

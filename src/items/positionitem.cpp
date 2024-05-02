@@ -88,6 +88,13 @@ void PositionItem::updateData(const QJsonObject &obj, AccountItem *owner)
 
 }
 
+void PositionItem::updateData(PositionItem *item)
+{
+    updateData(item->get_data());
+    acc_owners = item->get_owners();
+    owner_data = item->get_owners_data();
+}
+
 void PositionItem::updateData(const QJsonObject &obj)
 {
     if(!obj.isEmpty())
@@ -277,6 +284,16 @@ QString PositionItem::get_size(AccountItem *owner) const
         return "";
 
     return data["size"].toString();
+}
+
+QList<AccountItem *> PositionItem::get_owners() const
+{
+    return acc_owners;
+}
+
+QMap<AccountItem *, QJsonObject> PositionItem::get_owners_data() const
+{
+    return owner_data;
 }
 
 void PositionItem::buttonAccountsPressed()

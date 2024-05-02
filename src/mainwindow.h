@@ -36,7 +36,6 @@ public slots:
     void updateOrdTree(QJsonArray orders);
     void ordItemDoubleClicked(QTreeWidgetItem *item, int column);
 
-
 private slots:
     void timerChanged();
 

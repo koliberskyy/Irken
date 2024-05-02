@@ -151,7 +151,6 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
     controlUnitVBL->addWidget(gb_other);
 
 
-
     //main VBoxLayout
     mainVBL = new QVBoxLayout();
     mainVBL->addLayout(controlUnitVBL);
@@ -194,6 +193,17 @@ void KlinesWorkingSpace::setLeverage()
                 pd->setValue(pd->value() + 1);
             }
             pd->deleteLater();
+        }
+    }
+}
+
+void KlinesWorkingSpace::updatePosition(QList<AbstractItem *> list)
+{
+    for(auto &it : list){
+        auto item = (PositionItem*) it;
+        if(item->get_symbol() == candlestickWidget->get_currentSymbol()){
+            pos->updateData(item);
+            break;
         }
     }
 }

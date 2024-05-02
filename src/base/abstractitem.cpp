@@ -8,6 +8,11 @@ AbstractItem::AbstractItem(QWidget *parent)
 
 }
 
+QJsonObject AbstractItem::get_data() const
+{
+    return data;
+}
+
 int AbstractItem::itemHeight()
 {
     return oneItemHeight;

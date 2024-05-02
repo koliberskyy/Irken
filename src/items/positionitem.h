@@ -18,6 +18,7 @@ public:
     */
     virtual void updateData(const QJsonObject &obj = QJsonObject()) override;
     virtual void updateData(const QJsonObject &obj, AccountItem *owner);
+    virtual void updateData(PositionItem* item);
     virtual void addOwner(AccountItem *owner, const QJsonObject &obj = QJsonObject());
     virtual bool removeOwner(AccountItem* owner);
     virtual int ownersSize() const;
@@ -34,6 +35,10 @@ public:
     QString get_pnl() const;
     QString get_leverage(AccountItem* owner = nullptr) const;
     QString get_size(AccountItem* owner = nullptr) const;
+
+    QList<AccountItem *>            get_owners() const;
+    QMap<AccountItem*, QJsonObject> get_owners_data() const;
+
     bool isUpdated() const {return updated;}
 
 

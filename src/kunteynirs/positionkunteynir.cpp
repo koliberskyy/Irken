@@ -52,6 +52,8 @@ void PositionKunteynir::download(AccountItem *acc)
         updatePositions(info.list(), acc);
 
     }
+
+    emit updatingComplete(items);
     updateFinished = true;
 }
 

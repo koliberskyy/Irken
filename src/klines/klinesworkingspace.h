@@ -13,7 +13,11 @@ class KlinesWorkingSpace : public QWidget
 public:
     explicit KlinesWorkingSpace(QWidget *parent = nullptr);
     explicit KlinesWorkingSpace(AccountKunteynir *accKunt, QWidget *parent = nullptr);
-    CandleStickWidget * candlestickWidget;
+    CandleStickWidget *candlestickWidget;
+    PositionItem *pos;
+
+public slots:
+    void updatePosition(QList<AbstractItem *> list);
 
 private slots:
     void graphicControlComboChanged();
@@ -53,8 +57,6 @@ private:
 
 
     double showLeverageChooseDialog();
-
-    PositionItem *pos;
 
 };
 

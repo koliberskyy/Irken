@@ -59,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for(auto it : klinesWorkSpaces){
         tabWgt->addTab(it, "Гафик" );
+        connect(positions, SIGNAL(updatingComplete(QList<AbstractItem*>)), it, SLOT(updatePosition(QList<AbstractItem*>)));
     }
 
     createConnctions();

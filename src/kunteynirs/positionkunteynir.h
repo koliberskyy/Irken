@@ -24,7 +24,7 @@ public slots:
     */
     void download(AccountItem * acc = nullptr);
 signals:
-    void updateComplete(QJsonArray &posList);
+    void updatingComplete(QList<AbstractItem*>);
 private:
     void updatePositions(const QJsonArray &arr, AccountItem* owner = nullptr);
     QList<AccountItem *> accounts;
