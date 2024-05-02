@@ -35,7 +35,6 @@ private:
     QPushButton *HLTSButton;
     QPushButton *TradingSessionsButton;
 
-
     QVBoxLayout *mainVBL;
 
     QHBoxLayout *controlUnitVBL;
@@ -54,6 +53,8 @@ private:
 
 
     double showLeverageChooseDialog();
+
+    PositionItem *pos;
 
 };
 

@@ -21,8 +21,10 @@ public:
 public slots:
     /*
      * при не нулевом аккаунте качает только с него
-     */
+    */
     void download(AccountItem * acc = nullptr);
+signals:
+    void updateComplete(QJsonArray &posList);
 private:
     void updatePositions(const QJsonArray &arr, AccountItem* owner = nullptr);
     QList<AccountItem *> accounts;

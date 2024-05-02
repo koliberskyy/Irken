@@ -1,7 +1,7 @@
 #include "klinesworkingspace.h"
 
 KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
-    : QWidget{parent}, accounts{nullptr}
+    : QWidget{parent}, accounts{nullptr}, pos{new PositionItem()}
 {
     ///***candlestickWidget
 
@@ -141,7 +141,6 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
 
 
 
-
     //РАЗМЕТКА
 
     controlUnitVBL = new QHBoxLayout();
@@ -157,6 +156,7 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
     mainVBL = new QVBoxLayout();
     mainVBL->addLayout(controlUnitVBL);
     mainVBL->addWidget(candlestickWidget);
+    mainVBL->addWidget(pos);
 
     setLayout(mainVBL);
 }

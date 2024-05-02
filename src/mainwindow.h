@@ -53,7 +53,7 @@ private:
     //для отключения контроя позиций вместо true написать false
     bool positionControlActivated{true};
 
-    QToolBox *toolBox;
+    QTabWidget *toolBox;
 
     QDateTimeEdit *dateTimeEdit;
     QTimer *timer;

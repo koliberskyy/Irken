@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent)
       chartUpdateFluencySec(new qint64(3)),
       accTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
-      toolBox(new QToolBox())
+      toolBox(new QTabWidget())
 
 {
     //обновляем фильтры перед началом работы приложения
@@ -34,9 +34,9 @@ MainWindow::MainWindow(QWidget *parent)
     updateAccTree();
     updateOrdTree(QJsonArray());
 
-    toolBox->addItem(accTree, "Аккаунты");
-    toolBox->addItem(ordTree, "Ордера");
-    toolBox->addItem(accounts, "Аккаунты(бета)");
+    toolBox->addTab(accTree, "Аккаунты");
+    toolBox->addTab(ordTree, "Ордера");
+    toolBox->addTab(accounts, "Аккаунты(бета)");
 
     //positions
 
@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, &MainWindow::timeToUpdatePositions, positions, &PositionKunteynir::download);
     connect(this, SIGNAL(timeToUpdateBalances()), accounts, SLOT(updateBalance()));
 
-    toolBox->addItem(positions, "Позиции (бета)");
+    toolBox->addTab(positions, "Позиции (бета)");
 
     //klines work spaces
     klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
@@ -58,7 +58,7 @@ MainWindow::MainWindow(QWidget *parent)
     klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
 
     for(auto it : klinesWorkSpaces){
-        toolBox->addItem(it, "Гафик");
+        toolBox->addTab(it, "Гафик" );
     }
 
     createConnctions();
