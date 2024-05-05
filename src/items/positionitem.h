@@ -40,6 +40,7 @@ public:
     QMap<AccountItem*, QJsonObject> get_owners_data() const;
 
     bool isUpdated() const {return updated;}
+    bool isEmpty() const {return data.isEmpty();}
 
 
 protected slots:
@@ -47,7 +48,6 @@ protected slots:
     void buttonClosePressed();
     void buttonStopBUPressed();
     void setTpSL();
-
 
 private:
     bool updated{false};
@@ -84,6 +84,8 @@ public:
     //setters
     //setters
     void setUpdated(bool trg = true){updated = trg;}
+
+    void clear();
 
 
 

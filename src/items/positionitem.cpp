@@ -337,9 +337,7 @@ void PositionItem::buttonClosePressed()
                     }while(info.retCode() != 0);
                 pd->setValue(pd->value() + 1);
 
-
             }
-
             pd->deleteLater();
 
         }
@@ -396,6 +394,12 @@ void PositionItem::setTpSL()
             pd->deleteLater();
         }
     }
+}
+
+void PositionItem::clear()
+{
+    data = QJsonObject();
+    updateData(QJsonObject());
 }
 
 std::pair<double, double> PositionItem::showSlTpChooseDialog()

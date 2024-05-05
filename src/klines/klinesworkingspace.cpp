@@ -103,6 +103,8 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
     maxLeverageLabel = new QLabel("Максимальное плечо");
     maxLeverageDSB = new QDoubleSpinBox();
     maxLeverageDSB->setReadOnly(true);
+    maxLeverageDSB->setRange(0, 150);
+    maxLeverageDSB->setSingleStep(1);
     maxLeverageDSB->setValue(instruments::maxLeverage(symbolComboBox->currentText().toUtf8()));
 
     //set leverage button
@@ -199,12 +201,19 @@ void KlinesWorkingSpace::setLeverage()
 
 void KlinesWorkingSpace::updatePosition(QList<AbstractItem *> list)
 {
+    bool exist = false;
+
     for(auto &it : list){
         auto item = (PositionItem*) it;
         if(item->get_symbol() == candlestickWidget->get_currentSymbol()){
             pos->updateData(item);
+            exist = true;
             break;
         }
+    }
+
+    if(!exist && !pos->isEmpty()){
+        pos->clear();
     }
 }
 

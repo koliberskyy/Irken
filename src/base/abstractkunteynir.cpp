@@ -33,7 +33,7 @@ QList<AbstractItem* >::iterator AbstractKunteynir::removeItem(AbstractItem *item
 {
     if(item != nullptr){
         layout_main->removeWidget(item);
-        wgt->setFixedHeight(items.size()-1 * item->itemHeight());
+        wgt->setFixedHeight((items.size()-1) * item->itemHeight());
         return items.erase(findItemPosition(item));
     }
     return items.end();
