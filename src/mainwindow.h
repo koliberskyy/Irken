@@ -69,7 +69,6 @@ private:
     QTreeWidget *accTree;
     QTreeWidget *ordTree;
 
-    std::vector<KlinesWorkingSpace*> klinesWorkSpaces;
     void updateAccounts();
     void createConnctions();
     void displayInfo();

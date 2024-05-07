@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 {
     //обновляем фильтры перед началом работы приложения
-    auto filters = instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
+    instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
 
     //status bar
     auto bar = statusBar();
@@ -52,14 +52,12 @@ MainWindow::MainWindow(QWidget *parent)
     tabWgt->addTab(positions, "Позиции (бета)");
 
     //klines work spaces
-    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
-    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
-    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
-    klinesWorkSpaces.emplace_back(new KlinesWorkingSpace(accounts));
-
-    for(auto it : klinesWorkSpaces){
-        tabWgt->addTab(it, "Гафик" );
-        connect(positions, SIGNAL(updatingComplete(QList<AbstractItem*>)), it, SLOT(updatePosition(QList<AbstractItem*>)));
+    for (auto i = 0; i < 4; i++){
+        auto ptr = new KlinesWorkingSpace(accounts);
+        tabWgt->addTab(ptr, "Гафик" );
+        connect(positions, SIGNAL(updatingComplete(QList<AbstractItem*>)), ptr, SLOT(updatePosition(QList<AbstractItem*>)));
+        connect(ptr->candlestickWidget, SIGNAL(addOrderClicked(QJsonObject,int)), accounts, SLOT(shareOrder(QJsonObject,int)));
+        connect(this, &MainWindow::timeToUpdateKlines, ptr->candlestickWidget, &CandleStickWidget::updateCurrentChart);
     }
 
     createConnctions();
@@ -196,7 +194,6 @@ void MainWindow::updateOrdTree(QJsonArray orders)
 
 void MainWindow::ordItemDoubleClicked(QTreeWidgetItem *item, int column)
 {
-    auto symbol = item->text(2);
     QDialog dlg(this);
     auto form = new QFormLayout();
 
@@ -290,12 +287,8 @@ void MainWindow::createConnctions()
         connect(it, &Account::balanceUpdated, this, &MainWindow::updateAccTree);
         connect(it, SIGNAL(ordersUpdated(QJsonArray)), this, SLOT(updateOrdTree(QJsonArray)));
     }
-    for(auto it : klinesWorkSpaces){
-        connect(it->candlestickWidget, SIGNAL(addOrderClicked(QJsonObject, int)), accounts, SLOT(shareOrder(QJsonObject, int)));
-        connect(this, &MainWindow::timeToUpdateKlines, it->candlestickWidget, &CandleStickWidget::updateCurrentChart);
-    }
 
-    connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int )), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem *, int)));
+    connect(ordTree, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)), this, SLOT(ordItemDoubleClicked(QTreeWidgetItem*,int)));
     connect(timer, &QTimer::timeout, this, &MainWindow::timerChanged);
 
 

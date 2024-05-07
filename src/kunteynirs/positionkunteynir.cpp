@@ -92,10 +92,13 @@ void PositionKunteynir::updatePositions(const QJsonArray &arr, AccountItem *owne
             if(owner != nullptr)
                 item->removeOwner(owner);
 
-            if(item->ownersSize() == 0)
+            if(item->ownersSize() == 0){
+                item->clear();
                 it = removeItem(item);
-            else
+            }
+            else{
                 it++;
+            }
         }
         else{
             item->setUpdated(false);

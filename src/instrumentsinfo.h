@@ -16,9 +16,11 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <array>
 
-namespace symbol {
-const std::vector<QByteArray> utf8 = {
+class symbol {
+public:
+inline static const std::array<QByteArray, 55> utf8 = {
         "BTCUSDT",
         "BNBUSDT",
         "XRPUSDT",
@@ -76,10 +78,8 @@ const std::vector<QByteArray> utf8 = {
         "RNDRUSDT"
 
 };
-const std::vector<QByteArray> intervals = {
-    "240"
-};
-const std::vector<QByteArray> timeframes = {
+
+inline static const std::array<QByteArray, 13> timeframes = {
     "W",
     "D",
     "720",
@@ -105,7 +105,7 @@ inline int id(const QByteArray &symbol){
     }
     return -1;// обращение к элементу массива с таким индесом вызовет краш - это и есть цель
 }
-}
+};
 
 namespace instruments{
 
@@ -173,7 +173,7 @@ public:
     QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage = 20);
 };
 
-static std::unique_ptr<InstrumentsInfo> ii = nullptr;
+inline std::unique_ptr<InstrumentsInfo> ii = nullptr;
 
 inline QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage = 20){
     if (ii == nullptr){

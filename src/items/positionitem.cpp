@@ -76,7 +76,6 @@ PositionItem::PositionItem(QWidget *parent):
     layout_main->addLayout(grid_pm);
     layout_main->addLayout(grid_st);
     layout_main->addLayout(grid_ls);
-    layout_main->addLayout(vbl_ss);
     layout_main->addLayout(vbl_ac);
 
 }
@@ -314,12 +313,11 @@ void PositionItem::buttonClosePressed()
             //side
             auto side = [this]()->QString{if(get_side() == "Buy")return "Sell";else return "Buy";}();
             order.insert("side", side);
-
             order.insert("orderType", "Market");
-
             order.insert("reduceOnly", true);
 
             auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
+            pd->show();
 
             for (auto it : choosed){
                 pd->setLabelText(it->get_name() + " " + it->get_name_second());
@@ -335,9 +333,10 @@ void PositionItem::buttonClosePressed()
                     do{
                         info = Methods::placeOrder(order, it->get_api(), it->get_secret());
                     }while(info.retCode() != 0);
-                pd->setValue(pd->value() + 1);
 
+                pd->setValue(pd->value() + 1);
             }
+            pd->close();
             pd->deleteLater();
 
         }
@@ -350,11 +349,11 @@ void PositionItem::buttonStopBUPressed()
 
     if(!choosed.isEmpty()){
         auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
+        pd->show();
 
             for (auto it : choosed){
                 auto info = bybitInfo();
                 pd->setLabelText(it->get_name() + " " + it->get_name_second());
-
 
                 auto sl = get_poe(it).toDouble();
 
@@ -364,9 +363,9 @@ void PositionItem::buttonStopBUPressed()
                                                 sl, get_tp(it).toDouble());
                     }while(info.retCode() != 0 && info.retCode() != 34040);
                 pd->setValue(pd->value() + 1);
-
-
             }
+
+        pd->close();
         pd->deleteLater();
     }
 }
@@ -380,6 +379,7 @@ void PositionItem::setTpSL()
 
         if(sltp.first > 0 && sltp.second > 0){
             auto pd = new QProgressDialog("Прогресс",  "Остановить", 0, choosed.size(), this);
+            pd->show();
 
             for (auto it : choosed){
                 auto info = bybitInfo();
@@ -391,6 +391,7 @@ void PositionItem::setTpSL()
                 }while(info.retCode() != 0);
                 pd->setValue(pd->value() + 1);
             }
+            pd->close();
             pd->deleteLater();
         }
     }

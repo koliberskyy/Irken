@@ -123,10 +123,10 @@ void CandleStickWidget::autoDrawLiquidities()
         }
 
         //добавлеие несобранных
-        for(auto high : hights){
+        for(auto &high : hights){
             addHigh(high.count, high.timestamp);
         }
-        for(auto low : lows){
+        for(auto &low : lows){
             addLow(low.count, low.timestamp);
         }
     }
@@ -144,11 +144,7 @@ void CandleStickWidget::autoDrawImbalance()
     while(next != list.end()){
 
         //войд имбаланса больше размера одной из соседних свечей, а другая не прекрывает половину его тела
-        auto body = (*curr)->close() - (*curr)->open();
-        auto isBuyArea = body > 0;
-
-        if(!isBuyArea)
-            body *= (-1);
+        auto isBuyArea = (*curr)->close() > (*curr)->open();
 
         auto size_prev = (*prev)->high() - (*prev)->low();
         auto size_next = (*next)->high() - (*next)->low();
@@ -157,11 +153,10 @@ void CandleStickWidget::autoDrawImbalance()
         qreal middle;
         if(isBuyArea){
             voidImbalance = (*next)->low() - (*prev)->high();
-            //middle = (*prev)->high() + voidImbalance/2;
 
-            if(voidImbalance > size_prev /*&& middle < (*next)->low()*/
-            || voidImbalance > size_next /*&& middle > (*prev)->high()*/){
-            //if(voidImbalance > size_prev && middle < (*next)->low()){
+            if(voidImbalance > size_prev
+            || voidImbalance > size_next){
+
 
                 AbstractArea imba;
                 imba.isBuyArea = isBuyArea;
@@ -178,11 +173,9 @@ void CandleStickWidget::autoDrawImbalance()
         }
         else{
             voidImbalance = (*prev)->low() - (*next)->high();
-            //middle = (*next)->low() + voidImbalance/2;
 
-            if(voidImbalance > size_prev /*&& middle > (*next)->high()*/
-            || voidImbalance > size_next /*&& middle < (*prev)->low()*/){
-            //if(voidImbalance > size_prev && middle > (*next)->high()){
+            if(voidImbalance > size_prev
+            || voidImbalance > size_next ){
                 AbstractArea imba;
                 imba.isBuyArea = isBuyArea;
                 imba.high = (*prev)->low();
@@ -268,12 +261,9 @@ void CandleStickWidget::autoDrawOrderBlocks()
         qreal middle;
         if(isBuyArea){
             voidImbalance = (*next)->low() - (*prev)->high();
-            //middle = (*prev)->high() + voidImbalance/2;
-            middle = (*curr)->open() + body/2;
 
-            if(voidImbalance > size_prev /*&& middle < (*next)->low()*/
-            || voidImbalance > size_next /*&& middle > (*prev)->high()*/){
-            //if(voidImbalance > size_prev && middle < (*next)->low()){
+            if(voidImbalance > size_prev
+            || voidImbalance > size_next ){
 
                 //orderblock
                 auto it_ob = curr;
@@ -529,10 +519,10 @@ void CandleStickWidget::autoDrawNSLLiquds()
     }
 
     //добавлеие несобранных
-    for(auto high : hights){
+    for(auto &high : hights){
         addHigh(high.count, high.timestamp);
     }
-    for(auto low : lows){
+    for(auto &low : lows){
         addLow(low.count, low.timestamp);
     }
 }
@@ -543,10 +533,10 @@ void CandleStickWidget::autoDrawHLTS()
     std::set<LowLiquid> lows;
     auto list = klinesSeries->sets();
 
-    for(auto it : hightsList[currentSymbol]){
+    for(auto &it : hightsList[currentSymbol]){
         hights.insert(it);
     }
-    for(auto it : lowsList[currentSymbol]){
+    for(auto &it : lowsList[currentSymbol]){
         chart->removeSeries(it.series);
     }
     lowsList[currentSymbol].clear();
@@ -629,20 +619,20 @@ void CandleStickWidget::autoDrawHLTS()
         }
 
         //чистим старые лои
-        for(auto it: lowsList[currentSymbol]){
+        for(auto &it: lowsList[currentSymbol]){
             chart->removeSeries(it.series);
         }
         lowsList[currentSymbol].clear();
 
         //соединяем  xaи
         auto gls = new QLineSeries();
-        for(auto it : hights){
+        for(auto &it : hights){
             gls->append(it.timestamp, it.count);
         }
 
         //соединяем новые лои
         auto rls = new QLineSeries();
-        for(auto it : lows){
+        for(auto &it : lows){
             rls->append(it.timestamp, it.count);
         }
         QPen pen(Qt::blue);
@@ -667,7 +657,7 @@ void CandleStickWidget::autoDrawHLTS()
 
         //удаление хаев
 
-        for(auto it : hightsList[currentSymbol]){
+        for(auto &it : hightsList[currentSymbol]){
             chart->removeSeries(it.series);
         }
         hightsList[currentSymbol].clear();
@@ -722,7 +712,8 @@ void CandleStickWidget::autoDrawTradingSessions()
 
             if(box->isChecked()){
 
-                auto symbol = box->text().begin()->toLatin1();
+                auto tmp = box->text().begin();
+                auto symbol = tmp->toLatin1();
                 auto activeTradingSessionCount = std::atoi(&symbol);
                 switch (activeTradingSessionCount) {
                     case 1:
@@ -747,7 +738,7 @@ void CandleStickWidget::autoDrawTradingSessions()
     }
     else{
         if(!activeTradingSessions.isEmpty()){
-            for(auto session : activeTradingSessions){
+            for(auto &session : activeTradingSessions){
                 chart->removeSeries(session);
             }
             activeTradingSessions.clear();
@@ -878,8 +869,8 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
     if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_D){
         this->setCursor(Qt::CrossCursor);
         deactivateAllMods();
-        for(auto area : areas[currentSymbol]){
-            QObject::connect(area.series, SIGNAL(clicked(const QPointF)), this, SLOT(areaClicked()));
+        for(auto &area : areas[currentSymbol]){
+            QObject::connect(area.series, SIGNAL(clicked(QPointF)), this, SLOT(areaClicked()));
         }
         delModeActivated = true;
     }
@@ -914,8 +905,8 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
     if(event->key() == Qt::Key_Escape){
         if(this->cursor() == Qt::CrossCursor){
             this->setCursor(Qt::ArrowCursor);
-            for(auto area : areas[currentSymbol]){
-                QObject::disconnect(area.series, SIGNAL(clicked(const QPointF)), this, SLOT(areaClicked()));
+            for(auto &area : areas[currentSymbol]){
+                QObject::disconnect(area.series, SIGNAL(clicked(QPointF)), this, SLOT(areaClicked()));
             }
             deactivateAllMods();
         }
@@ -958,7 +949,7 @@ void CandleStickWidget::mouseDoubleClickEvent(QMouseEvent *event)
         auto ptr = (QValueAxis*)axisY;
         qreal max{0};
         qreal min{100000000};
-        for (auto set : klinesSeries->sets()){
+        for (auto &set : klinesSeries->sets()){
             if(set->high() > max)
                 max = set->high();
             if(set->low() < min)
@@ -1017,7 +1008,7 @@ void CandleStickWidget::klineClicked(QCandlestickSet *set)
             "3. Верхняя тень",
             "4. Нижняя тень"
         };
-        for(auto buttonText : btnText){
+        for(auto &buttonText : btnText){
             comboBox->addItem(buttonText);
         }
         buySellComboBox->addItem("Buy");
@@ -1102,8 +1093,8 @@ void CandleStickWidget::areaClicked()
         if(area != areas[currentSymbol].end()){
             area->removeFromChart(chart);
             areas[currentSymbol].erase(area);
-            for(auto area : areas[currentSymbol]){
-                QObject::disconnect(area.series, SIGNAL(clicked(const QPointF)), this, SLOT(areaClicked()));
+            for(auto &area_it : areas[currentSymbol]){
+                QObject::disconnect(area_it.series, SIGNAL(clicked(QPointF)), this, SLOT(areaClicked()));
             }
             deactivateAllMods();
 
@@ -1444,7 +1435,7 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         currentTimeframe = interval;
 
         if(klinesSeries != nullptr){
-            QObject::disconnect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));
+            QObject::disconnect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet*)));
             klinesSeries->clear();
         }
 
@@ -1463,7 +1454,7 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
 
 
         klinesSeries = new QCandlestickSeries();
-        auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));
+        auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet*)));
         klinesSeries->setUseOpenGL(true);
         klinesSeries->setIncreasingColor(QColor(Qt::green));
         klinesSeries->setDecreasingColor(QColor(Qt::red));
@@ -1506,7 +1497,8 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         chart->zoomReset();
 
         klinesSeries = new QCandlestickSeries();
-        auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet *)));        QJsonArray klines;
+        auto connection = QObject::connect(klinesSeries, SIGNAL(clicked(QCandlestickSet*)), this, SLOT(klineClicked(QCandlestickSet*)));
+        QJsonArray klines;
         klinesSeries->setUseOpenGL(true);
         klinesSeries->setIncreasingColor(QColor(Qt::green));
         klinesSeries->setDecreasingColor(QColor(Qt::red));
@@ -1896,19 +1888,19 @@ void CandleStickWidget::addExistSerieses()
 {
     auto highCopy = hightsList[currentSymbol];
     hightsList[currentSymbol].clear();
-    for(auto it : highCopy){
+    for(auto &it : highCopy){
         addHigh(it.count, it.timestamp);
     }
 
     auto lowCopy = lowsList[currentSymbol];
     lowsList[currentSymbol].clear();
-    for(auto it : lowCopy){
+    for(auto &it : lowCopy){
         addLow(it.count, it.timestamp);
     }
 
     auto areasCopy = areas[currentSymbol];
     areas[currentSymbol].clear();
-    for(auto it : areasCopy){
+    for(auto &it : areasCopy){
         addArea(it.high, it.low, it.timestamp, it.isBuyArea);
     }
 }
@@ -2140,7 +2132,6 @@ QList<QAreaSeries *> CandleStickWidget::drawTradingSession(int hourBegin, int ho
             pen.setWidth(3);
             pen.setCosmetic(true);
             area->setPen(pen);
-            QBrush brush;
             area->setBrush(Qt::Dense7Pattern);
             area->setUseOpenGL(true);
 

@@ -108,7 +108,7 @@ void Account::moveStopAndReduse(QJsonObject &&pos)
         Position::setTradingStop(pos, api(), secret(), avgPrice, takeProfit);
 
     int reduceIndex = -1;
-    for(auto it : vec_positionControlLambdas){
+    for(auto &it : vec_positionControlLambdas){
         auto tmp = it(reduceTable, pos);
         if(tmp >= 0)
             reduceIndex = tmp;
@@ -152,8 +152,6 @@ void Account::refreshOrderList(const QList<QJsonObject> &ordersToPost)
 
                 //закоменил эти условия для того чтобы не выставлялись ордера на манеты по которым открыты позиции
                 finded = true;
-                //контрольная точка для проверки
-                auto reduce = ex->operator[]("reduceOnly").toBool();
                 post.erase(po);
                 break;
             }

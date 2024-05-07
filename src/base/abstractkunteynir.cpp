@@ -32,9 +32,14 @@ void AbstractKunteynir::addItem(AbstractItem *item)
 QList<AbstractItem* >::iterator AbstractKunteynir::removeItem(AbstractItem *item)
 {
     if(item != nullptr){
+        auto reply = items.erase(findItemPosition(item));
         layout_main->removeWidget(item);
-        wgt->setFixedHeight((items.size()-1) * item->itemHeight());
-        return items.erase(findItemPosition(item));
+
+        //debug info
+        std::cout << "remeove item from kunteynir result /n (after layout_main->removeWidget(item);(item == nullptr)): " << (item == nullptr);
+
+        wgt->setFixedHeight((items.size()) * item->itemHeight());
+        return reply;
     }
     return items.end();
 }

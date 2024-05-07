@@ -1,7 +1,7 @@
 #include "klinesworkingspace.h"
 
 KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
-    : QWidget{parent}, accounts{nullptr}, pos{new PositionItem()}
+    : QWidget(parent), accounts{nullptr}
 {
     ///***candlestickWidget
 
@@ -18,14 +18,14 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
 
     //symbol combo box
     symbolComboBox = new QComboBox();
-    for(auto symbol : symbol::utf8){
+    for(auto &symbol : symbol::utf8){
         symbolComboBox->addItem(symbol);
     }
     QObject::connect(symbolComboBox, &QComboBox::currentTextChanged, this, &KlinesWorkingSpace::graphicControlComboChanged);
 
     //timeframe combo box
     timeframeComboBox = new QComboBox();
-    for(auto timeframe : symbol::timeframes){
+    for(auto &timeframe : symbol::timeframes){
         timeframeComboBox->addItem(timeframe);
     }
     QObject::connect(timeframeComboBox, &QComboBox::currentTextChanged, this, &KlinesWorkingSpace::graphicControlComboChanged);
@@ -157,6 +157,8 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
     mainVBL = new QVBoxLayout();
     mainVBL->addLayout(controlUnitVBL);
     mainVBL->addWidget(candlestickWidget);
+
+    pos = new PositionItem();
     mainVBL->addWidget(pos);
 
     setLayout(mainVBL);
