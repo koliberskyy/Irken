@@ -17,6 +17,8 @@
 #include <iostream>
 #include <iomanip>
 #include <array>
+#include <QProgressDialog>
+#include <atomic>
 
 class symbol {
 public:
@@ -171,6 +173,7 @@ public:
     void update_filters();
 
     QByteArray double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage = 20);
+
 };
 
 inline std::unique_ptr<InstrumentsInfo> ii = nullptr;

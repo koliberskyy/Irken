@@ -27,7 +27,7 @@ private:
     QComboBox *symbolComboBox;
     QComboBox *timeframeComboBox;
     QLabel *maxLeverageLabel;
-    QDoubleSpinBox *maxLeverageDSB;
+    QSpinBox *maxLeverageDSB;
 
     QPushButton *liquidityButton;
     QPushButton *imbalanceButton;

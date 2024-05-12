@@ -39,8 +39,8 @@ InstrumentsInfo::InstrumentsInfo()
 //GET /v5/market/instruments-info?category=linear&symbol=BTCUSDT HTTP/1.1
 void InstrumentsInfo::update_filters()
 {
-    std::mutex mutex;
-    auto lambada = [filt = &filters, mtx = &mutex](const QByteArray &symbol){
+
+    auto lambada = [filt = &filters](const QByteArray &symbol){
         if(filt->price[symbol].isEmpty() || filt->leverage[symbol].isEmpty() || filt->lotSize[symbol].isEmpty() )
         {
             QEventLoop eventLoop;
@@ -49,8 +49,8 @@ void InstrumentsInfo::update_filters()
             QByteArray query("symbol=" + symbol + "&category=linear");
             QUrl url("https://api.bybit.com//v5/market/instruments-info?" + std::move(query));
 
-            QNetworkRequest req(url);
 
+            QNetworkRequest req(url);
             QNetworkReply *reply = mgr.get(req);
             eventLoop.exec();
 
@@ -82,19 +82,16 @@ void InstrumentsInfo::update_filters()
     };
 
     std::vector<std::thread> thr_vec;
-    int threadLimit{0};
+
     for(const auto &it : symbol::utf8){
         thr_vec.emplace_back(std::thread(lambada, it));
-        threadLimit++;
-        if(threadLimit == 10){
-            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-        }
     }
     for(auto &it : thr_vec){
         if(it.joinable()){
             it.join();
         }
     }
+
 }
 
 QByteArray InstrumentsInfo::double_to_utf8(const QByteArray &symbol, Filter_type f_type, double val, double tradingLeverage)

@@ -92,16 +92,13 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
 
     ///***end of NSL indicators group
 
-
-
-
     ///***leverage group
     gb_leverage = new QGroupBox("Плечо");
     gb_leverage_layout = new QVBoxLayout();
 
     //max leverage info
     maxLeverageLabel = new QLabel("Максимальное плечо");
-    maxLeverageDSB = new QDoubleSpinBox();
+    maxLeverageDSB = new QSpinBox();
     maxLeverageDSB->setReadOnly(true);
     maxLeverageDSB->setRange(0, 150);
     maxLeverageDSB->setSingleStep(1);

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.11.1 LANGUAGES CXX)
+project(Irken VERSION 6.11.2 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 

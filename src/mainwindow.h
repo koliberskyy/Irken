@@ -12,6 +12,7 @@
 #include <QCheckBox>
 
 #include <memory>
+#include <QSpacerItem>
 
 
 #include "klinesworkingspace.h"

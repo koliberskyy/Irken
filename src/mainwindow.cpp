@@ -17,29 +17,46 @@ MainWindow::MainWindow(QWidget *parent)
       tabWgt(new QTabWidget())
 
 {
+    auto progress = new QProgressDialog("", "Не жми сюда", 0, 10, this, Qt::WindowStaysOnTopHint);
+    progress->setMinimumSize(300, 100);
+    progress->setWindowTitle("Требуется интернет. Запуск.");
+    progress->show();
+
     //обновляем фильтры перед началом работы приложения
     instruments::double_to_utf8("BTCUSDT", instruments::Filter_type::lotSize, 10);
+    progress->setValue(1);
+
+    progress->setLabelText("Создаю статус бар.");
 
     //status bar
     auto bar = statusBar();
+
+    auto close_btn = new QPushButton("Выход");
+    close_btn->setPalette(QPalette(Qt::red));
+    QObject::connect(close_btn, &QPushButton::clicked, this, &MainWindow::close);
+    bar->addWidget(close_btn);
+
+    auto hide_btn = new QPushButton("Свернуть");
+    hide_btn->setPalette(QPalette(Qt::blue));
+    QObject::connect(hide_btn, &QPushButton::clicked, this, &MainWindow::showMinimized);
+    bar->addWidget(hide_btn);
+
     dateTimeEdit->setReadOnly(true);
     dateTimeEdit->setDisplayFormat("dd-MM-yyyy HH:mm:ss");
     bar->addWidget(dateTimeEdit);
+
     bar->show();
     timer->start(1000);
 
-    setMinimumSize(800, 600);
     updateAccounts();
 
     updateAccTree();
     updateOrdTree(QJsonArray());
 
-    tabWgt->addTab(accTree, "Аккаунты");
-    tabWgt->addTab(ordTree, "Ордера");
-    tabWgt->addTab(accounts, "Аккаунты(бета)");
+    progress->setValue(progress->value() + 1);
+    progress->setLabelText("Обновляю позиции.");
 
     //positions
-
     auto accList_abs = accounts->get_items();
     QList<AccountItem *> accList;
     for(auto it : accList_abs){
@@ -49,20 +66,29 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, &MainWindow::timeToUpdatePositions, positions, &PositionKunteynir::download);
     connect(this, SIGNAL(timeToUpdateBalances()), accounts, SLOT(updateBalance()));
 
-    tabWgt->addTab(positions, "Позиции (бета)");
+    progress->setValue(progress->value() + 1);
 
     //klines work spaces
     for (auto i = 0; i < 4; i++){
+        progress->setLabelText("Создаю рабочее пространство №" + QString::fromStdString(std::to_string(i+1)));
+        progress->setValue(progress->value() + 1);
         auto ptr = new KlinesWorkingSpace(accounts);
-        tabWgt->addTab(ptr, "Гафик" );
+        tabWgt->addTab(ptr, "Гафик" + QString::fromStdString(std::to_string(i+1)));
         connect(positions, SIGNAL(updatingComplete(QList<AbstractItem*>)), ptr, SLOT(updatePosition(QList<AbstractItem*>)));
         connect(ptr->candlestickWidget, SIGNAL(addOrderClicked(QJsonObject,int)), accounts, SLOT(shareOrder(QJsonObject,int)));
         connect(this, &MainWindow::timeToUpdateKlines, ptr->candlestickWidget, &CandleStickWidget::updateCurrentChart);
     }
-
     createConnctions();
 
+    tabWgt->addTab(accTree, "Аккаунты");
+    tabWgt->addTab(ordTree, "Ордера");
+    tabWgt->addTab(accounts, "Аккаунты(бета)");
+    tabWgt->addTab(positions, "Позиции (бета)");
+
     setCentralWidget(tabWgt);
+
+    progress->setValue(progress->maximum());
+    delete  progress;
 
 }
 
