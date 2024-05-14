@@ -89,7 +89,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     progress->setValue(progress->maximum());
     delete  progress;
-
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -330,6 +329,7 @@ void MainWindow::displayInfo()
     QString str;
     str.append("Для вызова этой справки нажми f1 в любое время\n");
     str.append("\n");
+    str.append("Для работы программы треуется интернет. Для вытавления(промотра) ордеров и позиций необходим API key загруженый в json формате в файл AccountList.txt.\n");
     str.append("Список горячих клавиш:\n");
     str.append("ctrl+b - Купить ПО РЫНКУ\n");
     str.append("ctrl+s - Продать ПО РЫНКУ\n");
@@ -340,6 +340,7 @@ void MainWindow::displayInfo()
     str.append("\t в режимах лоёв и хуёв: \n");
     str.append("\t\t держи ctrl для выставления тейк-профита \n");
     str.append("\t\t держи shift для выставления стоп-лосса \n");
+    str.append("ctrl+r - Режим выставления произвольной Зоны\n");
     str.append("Esc - выключить все режимы\n");
     str.append("\n");
     str.append("Два раза кликни по позиции чтобы закрыть её или выставить стоп б/у\n");

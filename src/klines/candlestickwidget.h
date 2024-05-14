@@ -252,8 +252,10 @@ private:
 
     QList<QAreaSeries*> drawTradingSession(int hourBegin, int hourEnd, QColor color);
 
-
-
+    //risk ratio
+    static double getRiskRatio(double poe, double sl, double tp);
+    static double getStopLossPercent(double poe, double sl);
+    static double leverageFromSLP(double slp); //SLP - stop loss percent
 
 };
 

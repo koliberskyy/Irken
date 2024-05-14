@@ -1142,6 +1142,9 @@ void CandleStickWidget::areaDoubleClicked()
         if(takeProfit.series != nullptr){
             dsb_tp->setValue(takeProfit.count);
         }
+        else{
+            dsb_tp->setValue(0);
+        }
 
         //dsb_sl
         auto dsb_sl = new QDoubleSpinBox();
@@ -1171,11 +1174,30 @@ void CandleStickWidget::areaDoubleClicked()
         QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
 
 
+        QDoubleSpinBox* dsb_RR = nullptr;
+
+        //dsb_rr
+        if(dsb_tp->value() > 0){
+            dsb_RR = new QDoubleSpinBox();
+            dsb_RR->setRange(0, 100);
+            dsb_RR->setSingleStep(instruments::stepPrice(currentSymbol));
+            dsb_RR->setReadOnly(true);
+            dsb_RR->setValue(getRiskRatio(dsb_price->value(), dsb_sl->value(), dsb_tp->value()));
+        }
+
         //sb_lev
         auto sb_lev = new QSpinBox();
         sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
-        sb_lev->setValue(sb_lev->maximum());
         sb_lev->setSingleStep(1);
+
+        auto slp = getStopLossPercent(dsb_price->value(), dsb_sl->value());
+        auto levCount = leverageFromSLP(slp);
+
+        if(levCount >= sb_lev->maximum())
+            sb_lev->setValue(sb_lev->maximum());
+        else
+            sb_lev->setValue(levCount);
+
 
         //sld_lev
         auto sld_lev = new QSlider(Qt::Horizontal);
@@ -1209,6 +1231,9 @@ void CandleStickWidget::areaDoubleClicked()
         form->addRow(new QLabel("СЛ"), dsb_sl);
         form->addRow(new QLabel("%"), sb_qty);
         form->addRow(sld_qty);
+        if(dsb_RR != nullptr){
+            form->addRow(new QLabel("RR"), dsb_RR);
+        }
         form->addRow(new QLabel("Плечо"), sb_lev);
         form->addRow(sld_lev);
         form->addRow(btn_box);
@@ -1248,10 +1273,13 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     //dsb_tp
     auto dsb_tp = new QDoubleSpinBox();
     dsb_tp->setDecimals(instruments::dap(currentSymbol));
-    dsb_tp->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
+    dsb_tp->setRange(0, instruments::maxPrice(currentSymbol));
     dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
     if(takeProfit.series != nullptr){
         dsb_tp->setValue(takeProfit.count);
+    }
+    else{
+        dsb_tp->setValue(0);
     }
 
     //dsb_sl
@@ -1275,11 +1303,30 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
     QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
 
+
+    QDoubleSpinBox* dsb_RR = nullptr;
+
+    //dsb_rr
+    if(dsb_tp->value() > 0){
+        dsb_RR = new QDoubleSpinBox();
+        dsb_RR->setRange(0, 100);
+        dsb_RR->setSingleStep(instruments::stepPrice(currentSymbol));
+        dsb_RR->setReadOnly(true);
+        dsb_RR->setValue(getRiskRatio(currentPrice.count, dsb_sl->value(), dsb_tp->value()));
+    }
+
     //sb_lev
     auto sb_lev = new QSpinBox();
     sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
-    sb_lev->setValue(sb_lev->maximum());
     sb_lev->setSingleStep(1);
+
+    auto slp = getStopLossPercent(currentPrice.count, dsb_sl->value());
+    auto levCount = leverageFromSLP(slp);
+
+    if(levCount >= sb_lev->maximum())
+        sb_lev->setValue(sb_lev->maximum());
+    else
+        sb_lev->setValue(levCount);
 
     //sld_lev
     auto sld_lev = new QSlider(Qt::Horizontal);
@@ -1301,6 +1348,9 @@ void CandleStickWidget::marketBuySellInit(const QString &side)
     form->addRow(new QLabel("СЛ"), dsb_sl);
     form->addRow(new QLabel("%"), sb_qty);
     form->addRow(sld_qty);
+    if(dsb_RR != nullptr){
+        form->addRow(new QLabel("RR"), dsb_RR);
+    }
     form->addRow(new QLabel("Плечо"), sb_lev);
     form->addRow(sld_lev);
     form->addRow(btn_box);
@@ -2148,6 +2198,36 @@ QList<QAreaSeries *> CandleStickWidget::drawTradingSession(int hourBegin, int ho
     }
 
     return reply;
+}
+
+double CandleStickWidget::getRiskRatio(double poe, double sl, double tp)
+{
+    //уловие лонг позиции
+    if(poe > sl){
+        return (tp - poe) / (poe-sl);
+    }
+    else{
+        return (poe - tp) / (sl - poe);
+    }
+}
+
+double CandleStickWidget::getStopLossPercent(double poe, double sl)
+{
+    //уловие лонг позиции
+    if(poe > sl){
+        return 100 * (poe-sl) / sl;
+    }
+    else{
+        return 100 * (sl - poe) / poe;
+    }
+}
+
+double CandleStickWidget::leverageFromSLP(double slp)
+{
+    if(slp <= 0)
+        return 0;
+
+    return 100 / slp;
 }
 
 bool AbstractLiquid::operator <(const AbstractLiquid &other) const

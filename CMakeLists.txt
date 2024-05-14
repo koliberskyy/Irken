@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.11.2 LANGUAGES CXX)
+project(Irken VERSION 6.11.3 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -8,7 +8,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-#использую 17й стандарт для корректной работы смарт поинтеров без использования make_unique_shared<>
+#использую 17й стандарт для корректной работы смарт поинтеров без использования make_unique[_shared]<>
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
