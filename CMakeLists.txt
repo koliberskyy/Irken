@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.11.3 LANGUAGES CXX)
+project(Irken VERSION 6.12.0 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -22,6 +22,7 @@ include_directories(
     src/base
     src/items
     src/kunteynirs
+    src/spredCalculator
     )
 
 set(PROJECT_SOURCES
@@ -58,6 +59,9 @@ set(PROJECT_SOURCES
         src/kunteynirs/accountkunteynir.cpp
         src/kunteynirs/positionkunteynir.h
         src/kunteynirs/positionkunteynir.cpp
+
+        src/spredCalculator/spredcalculatorwgt.cpp
+        src/spredCalculator/spredcalculatorwgt.h
 
         README.txt
 )

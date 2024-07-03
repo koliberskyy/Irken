@@ -44,6 +44,7 @@ signals:
     void timeToUpdatePositions(AccountItem*);
     void timeToUpdateBalances();
     void timeToUpdateKlines();
+    void closeButtonPressed();
 
 private:
 

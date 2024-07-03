@@ -6,6 +6,7 @@
 #include "positionkunteynir.h"
 #include "candlestickwidget.h"
 #include "accountkunteynir.h"
+#include "spredcalculatorwgt.h"
 
 class KlinesWorkingSpace : public QWidget
 {
@@ -55,6 +56,7 @@ private:
 
     AccountKunteynir *accounts;
 
+    SpredCalculatorWgt *spredWgt;
 
     double showLeverageChooseDialog();
 

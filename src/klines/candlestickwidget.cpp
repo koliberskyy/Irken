@@ -3,7 +3,7 @@
 CandleStickWidget::CandleStickWidget(QWidget *parent)
     : QChartView{parent}
 {
-    updateKlines("BTCUSDT", "W", "1000");
+    updateKlines("NOTUSDT", "W", "1000");
 
 }
 
@@ -1443,6 +1443,8 @@ void CandleStickWidget::updateCurrentChart()
         newCurrPriceSer->attachAxis(axisY);
 
         newCurrPriceSer->setVisible(true);
+
+        emit currentPriceChanged(currentPrice.count);
     }
 }
 

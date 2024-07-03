@@ -137,17 +137,19 @@ KlinesWorkingSpace::KlinesWorkingSpace(QWidget *parent)
     gb_other->setLayout(gb_other_layout);
     ///***end of other group
 
-
-
+    // SPRED WGT
+    spredWgt = new SpredCalculatorWgt();
+    QObject::connect(candlestickWidget, &CandleStickWidget::currentPriceChanged, spredWgt, &SpredCalculatorWgt::updatePrice);
+    // EOF SPRED WGT
 
     //РАЗМЕТКА
-
     controlUnitVBL = new QHBoxLayout();
     controlUnitVBL->addWidget(gb_symbolTF);
     controlUnitVBL->addWidget(gb_smartmoney);
     controlUnitVBL->addWidget(gb_NSL);
     controlUnitVBL->addWidget(gb_leverage);
     controlUnitVBL->addWidget(gb_other);
+    controlUnitVBL->addWidget(spredWgt);
 
 
     //main VBoxLayout

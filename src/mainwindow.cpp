@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto close_btn = new QPushButton("Выход");
     close_btn->setPalette(QPalette(Qt::red));
-    QObject::connect(close_btn, &QPushButton::clicked, this, &MainWindow::close);
+    QObject::connect(close_btn, &QPushButton::clicked, this, [this](bool){emit this->closeButtonPressed();});
     bar->addWidget(close_btn);
 
     auto hide_btn = new QPushButton("Свернуть");
@@ -69,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
     progress->setValue(progress->value() + 1);
 
     //klines work spaces
-    for (auto i = 0; i < 4; i++){
+    for (auto i = 0; i < 3; i++){
         progress->setLabelText("Создаю рабочее пространство №" + QString::fromStdString(std::to_string(i+1)));
         progress->setValue(progress->value() + 1);
         auto ptr = new KlinesWorkingSpace(accounts);

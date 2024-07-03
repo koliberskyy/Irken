@@ -145,6 +145,7 @@ public:
     QString get_currentSymbol() const;
 signals:
     void addOrderClicked(QJsonObject order, int leverage);
+    void currentPriceChanged(double price);
 public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
     /*
