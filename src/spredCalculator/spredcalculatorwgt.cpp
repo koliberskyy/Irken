@@ -72,6 +72,7 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     dsb_priceRUB->setDecimals(3);
     dsb_priceRUB->setReadOnly(true);
 
+
     // USDT-RUB
     dsb_priceUSDT_RUB_market = new QDoubleSpinBox();
     dsb_priceUSDT_RUB_market->setMinimum(0.0);
@@ -107,6 +108,9 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
 
    // rform->addRow(l_USDTRUB, dsb_priceUSDT_RUB);
 
+    // SHOW BIG BUTTON
+    showBigButton = new QPushButton("BIG");
+
 
     // MAIN LAYOUT
     vlay_main = new QVBoxLayout();
@@ -115,6 +119,7 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     hlay_main->addLayout(lform);
     hlay_main->addLayout(rform);
     hlay_main->addLayout(lay_other);
+    hlay_main->addWidget(showBigButton);
 
     vlay_main->addWidget(l_widgetName);
     vlay_main->addLayout(hlay_main);
@@ -144,6 +149,9 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     QObject::connect(dsb_priceUSDT, &QDoubleSpinBox::valueChanged,
                      this, &SpredCalculatorWgt::lastPriceChanged);
 
+    QObject::connect(showBigButton, &QPushButton::clicked,
+                     this, &SpredCalculatorWgt::showBigPrice);
+
 
 }
 
@@ -172,3 +180,15 @@ void SpredCalculatorWgt::updatePrice(double price)
     dsb_priceUSDT->setValue(price);
 }
 
+void SpredCalculatorWgt::showBigPrice()
+{
+    auto lcd = new QLCDNumber();
+    lcd->display(dsb_priceRUB->value());
+    lcd->setDigitCount(16);
+
+    QObject::connect(dsb_priceRUB, SIGNAL(valueChanged(double)),
+                     lcd, SLOT(display(double)));
+
+    lcd->setMinimumSize(800, 200);
+    lcd->show();
+}

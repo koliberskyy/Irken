@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
       chartUpdateTime(new QDateTime(QDateTime::currentDateTime())),
       posUpdateFluencySec(new qint64(3)),
       ordUpdateFluencySec(new qint64(10)),
-      chartUpdateFluencySec(new qint64(3)),
+      chartUpdateFluencySec(new qint64(1)),
       accTree(new QTreeWidget()),
       ordTree(new QTreeWidget()),
       tabWgt(new QTabWidget())

@@ -2247,7 +2247,7 @@ bool AbstractLiquid::operator ==(const AbstractLiquid &other) const
 //klines**************************
 QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin, const QString &end)
 {
-    QByteArray query("category=linear&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=" +limit.toUtf8());
+    QByteArray query("category=spot&symbol=" + symbol.toUtf8() + "&interval=" + interval.toUtf8() + "&limit=" +limit.toUtf8());
 
     if(!begin.isEmpty() && !end.isEmpty())
         query.append("&start=" + begin.toUtf8() + "&end=" + end.toUtf8());
@@ -2256,7 +2256,10 @@ QJsonArray Klines::downloadKlines(const QString &symbol, const QString &interval
         return QJsonArray();
     }
 
-    QString url("https://api.bybit.com/v5/market/mark-price-kline?");
+    //QString url("https://api.bybit.com/v5/market/mark-price-kline?");
+
+    QString url("https://api.bybit.com/v5/market/kline?");
+
 
     auto customReplyParser = [](const QUrl &url, const QByteArray &data) ->QJsonObject
         {

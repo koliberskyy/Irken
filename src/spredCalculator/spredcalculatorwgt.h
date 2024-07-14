@@ -8,6 +8,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFormLayout>
+#include <QLCDNumber>
 
 class SpredCalculatorWgt : public QWidget
 {
@@ -41,6 +42,9 @@ class SpredCalculatorWgt : public QWidget
     QFormLayout *lform;
     QFormLayout *rform;
 
+    QPushButton *showBigButton;
+
+
 public:
     SpredCalculatorWgt(QWidget *parent = nullptr);
     ~SpredCalculatorWgt() = default;
@@ -50,6 +54,7 @@ private slots:
     void lastPriceChanged();
 public slots:
     void updatePrice(double price);
+    void showBigPrice();
 
 };
 #endif // WIDGET_H
