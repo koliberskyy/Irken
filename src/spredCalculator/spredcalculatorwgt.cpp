@@ -111,6 +111,14 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     // SHOW BIG BUTTON
     showBigButton = new QPushButton("BIG");
 
+    // SELL PRICE FOLLOW CHECKBOX
+    sellPriceFollowCheck = new QCheckBox("Follow");
+
+    // BIG FOLLOW LAY
+    auto bfLay = new QVBoxLayout();
+    bfLay->addWidget(showBigButton);
+    bfLay->addWidget(sellPriceFollowCheck);
+
 
     // MAIN LAYOUT
     vlay_main = new QVBoxLayout();
@@ -119,7 +127,7 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     hlay_main->addLayout(lform);
     hlay_main->addLayout(rform);
     hlay_main->addLayout(lay_other);
-    hlay_main->addWidget(showBigButton);
+    hlay_main->addLayout(bfLay);
 
     vlay_main->addWidget(l_widgetName);
     vlay_main->addLayout(hlay_main);
@@ -152,6 +160,9 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     QObject::connect(showBigButton, &QPushButton::clicked,
                      this, &SpredCalculatorWgt::showBigPrice);
 
+    QObject::connect(sellPriceFollowCheck, SIGNAL(toggled(bool)),
+                     this, SLOT(sellPriceFollowCheckToggled(bool)));
+
 
 }
 
@@ -175,6 +186,18 @@ void SpredCalculatorWgt::lastPriceChanged()
                            (dsb_priceUSDT_RUB_market->value() + dsb_priceUSDT_RUB_real->value()) / 2);
 }
 
+void SpredCalculatorWgt::sellPriceFollowCheckToggled(bool check)
+{
+    if(check){
+        QObject::connect(dsb_priceRUB, SIGNAL(valueChanged(double)),
+                         dsb_sellPrice, SLOT(setValue(double)));
+    }
+    else {
+        QObject::disconnect(dsb_priceRUB, SIGNAL(valueChanged(double)),
+                         dsb_sellPrice, SLOT(setValue(double)));
+    }
+}
+
 void SpredCalculatorWgt::updatePrice(double price)
 {
     dsb_priceUSDT->setValue(price);
@@ -183,6 +206,7 @@ void SpredCalculatorWgt::updatePrice(double price)
 void SpredCalculatorWgt::showBigPrice()
 {
     auto lcd = new QLCDNumber();
+    lcd->setWindowFlag(Qt::WindowStaysOnTopHint);
     lcd->display(dsb_priceRUB->value());
     lcd->setDigitCount(16);
 

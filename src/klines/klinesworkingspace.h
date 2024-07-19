@@ -7,7 +7,6 @@
 #include "candlestickwidget.h"
 #include "accountkunteynir.h"
 #include "spredcalculatorwgt.h"
-#include "doublelcd.h"
 
 class KlinesWorkingSpace : public QWidget
 {

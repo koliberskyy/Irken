@@ -9,6 +9,7 @@
 #include <QVBoxLayout>
 #include <QFormLayout>
 #include <QLCDNumber>
+#include <QCheckBox>
 
 class SpredCalculatorWgt : public QWidget
 {
@@ -43,6 +44,8 @@ class SpredCalculatorWgt : public QWidget
     QFormLayout *rform;
 
     QPushButton *showBigButton;
+    QCheckBox *sellPriceFollowCheck;
+
 
 
 public:
@@ -52,6 +55,7 @@ public:
 private slots:
     void priceChanged();
     void lastPriceChanged();
+    void sellPriceFollowCheckToggled(bool check);
 public slots:
     void updatePrice(double price);
     void showBigPrice();
