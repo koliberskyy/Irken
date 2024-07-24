@@ -141,11 +141,10 @@ class CandleStickWidget : public QChartView
     Q_OBJECT
 public:
     explicit CandleStickWidget(QWidget *parent = nullptr);
-    static QJsonArray downloadKlines(const QString &symbol, const QString &interval, const QString &limit, const QString &begin = "", const QString &end = "");
     QString get_currentSymbol() const;
 signals:
-    void addOrderClicked(QJsonObject order, int leverage);
     void currentPriceChanged(double price);
+    void klineAdded(QString symbol, QString interval, QJsonArray klines);
 public slots:
     void updateKlines(const QString &symbol, const QString &interval, const QString &limit = "1000");
     /*
@@ -195,8 +194,6 @@ protected:
 private slots:
     void klineClicked(QCandlestickSet *set);
     void areaClicked();
-    void areaDoubleClicked();
-    void marketBuySellInit(const QString &side);
     void showToolTip(const QPointF &point);
 
 private:

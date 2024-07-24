@@ -3,17 +3,11 @@
 SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     : QWidget(parent),
       l_widgetName(new QLabel("Калькулятор спреда")),
-      l_comission(new QLabel("Комиссия %")),
-      l_buyPrice(new QLabel("Цена покупки")),
-      l_sellPrice(new QLabel("Цена продажи")),
-      l_spred(new QLabel("Spred %")),
-      l_cashBefore(new QLabel("Фиат до")),
-      l_cashAfter(new QLabel("После")),
-      l_priceUSDT(new QLabel("USDT")),
-      l_priceRUB(new QLabel("RUB")),
-      l_USDTRUB_market(new QLabel("USDT/RUB рын.")),
-      l_USDTRUB_real(new QLabel("USDT/RUB реал."))
-
+      l_comission(new QLabel("Комиссия/СПРЕД")),
+      l_buyPrice(new QLabel("Покупка/Продажа")),
+      l_cashBefore(new QLabel("Фиат до/после")),
+      l_priceUSDT(new QLabel("USDT/RUB")),
+      l_USDTRUB_market(new QLabel("USDT/RUB"))
 {
     // BUY PRICE
     dsb_buyPrice = new QDoubleSpinBox();
@@ -63,7 +57,7 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     dsb_priceUSDT = new QDoubleSpinBox();
     dsb_priceUSDT->setMinimum(0.0);
     dsb_priceUSDT->setMaximum(10'000'000);
-    dsb_priceUSDT->setDecimals(8);
+    dsb_priceUSDT->setDecimals(6);
     dsb_priceUSDT->setReadOnly(true);
     //
     dsb_priceRUB = new QDoubleSpinBox();
@@ -71,7 +65,12 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     dsb_priceRUB->setMaximum(10'000'000);
     dsb_priceRUB->setDecimals(3);
     dsb_priceRUB->setReadOnly(true);
-
+    //big action
+    dsb_priceRUB->setContextMenuPolicy(Qt::ActionsContextMenu);
+    auto bigAction = new QAction("Show BIG");
+    dsb_priceRUB->addAction(bigAction);
+    QObject::connect(bigAction, &QAction::triggered,
+                     this, &SpredCalculatorWgt::showBigPrice);
 
     // USDT-RUB
     dsb_priceUSDT_RUB_market = new QDoubleSpinBox();
@@ -79,34 +78,8 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     dsb_priceUSDT_RUB_market->setMaximum(10'000'000);
     dsb_priceUSDT_RUB_market->setDecimals(2);
     dsb_priceUSDT_RUB_market->setValue(90.0);
-    //
-    dsb_priceUSDT_RUB_real = new QDoubleSpinBox();
-    dsb_priceUSDT_RUB_real->setMinimum(0.0);
-    dsb_priceUSDT_RUB_real->setMaximum(10'000'000);
-    dsb_priceUSDT_RUB_real->setDecimals(2);
-    dsb_priceUSDT_RUB_real->setValue(90.0);
 
 
-    // FORM
-    lform = new QFormLayout();
-    lform->addRow(l_buyPrice, l_sellPrice);
-    lform->addRow(dsb_buyPrice, dsb_sellPrice);
-    lform->addRow(l_comission, l_spred);
-    lform->addRow(dsb_comission, dsb_spred);
-    rform = new QFormLayout();
-    rform->addRow(l_cashBefore, l_cashAfter);
-    rform->addRow(dsb_cashBefore, dsb_cashAfter);
-    rform->addRow(l_priceUSDT, l_priceRUB);
-    rform->addRow(dsb_priceUSDT, dsb_priceRUB);
-
-    // OTHER LAYOUT
-    auto lay_other = new QVBoxLayout();
-    lay_other->addWidget(l_USDTRUB_market);
-    lay_other->addWidget(dsb_priceUSDT_RUB_market);
-    lay_other->addWidget(l_USDTRUB_real);
-    lay_other->addWidget(dsb_priceUSDT_RUB_real);
-
-   // rform->addRow(l_USDTRUB, dsb_priceUSDT_RUB);
 
     // SHOW BIG BUTTON
     showBigButton = new QPushButton("BIG");
@@ -114,20 +87,54 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     // SELL PRICE FOLLOW CHECKBOX
     sellPriceFollowCheck = new QCheckBox("Follow");
 
-    // BIG FOLLOW LAY
-    auto bfLay = new QVBoxLayout();
-    bfLay->addWidget(showBigButton);
-    bfLay->addWidget(sellPriceFollowCheck);
+
+
+
+
+
+    // ***************** MAPPING ***************
+
+    // OTHER LAYOUT
+    auto lay_other = new QVBoxLayout();
+    lay_other->addWidget(l_USDTRUB_market);
+    lay_other->addWidget(dsb_priceUSDT_RUB_market);
+    lay_other->addWidget(sellPriceFollowCheck);
+
+    // buy sell price
+    auto vlayBuySell = new QVBoxLayout();
+    vlayBuySell->addWidget(l_buyPrice);
+    vlayBuySell->addWidget(dsb_buyPrice);
+    vlayBuySell->addWidget(dsb_sellPrice);
+
+    // comission, spred
+    auto vlayComissionSpred = new QVBoxLayout();
+    vlayComissionSpred->addWidget(l_comission);
+    vlayComissionSpred->addWidget(dsb_comission);
+    vlayComissionSpred->addWidget(dsb_spred );
+
+    // PRICE USDT/RUB
+    auto vlaypPrices = new QVBoxLayout();
+    vlaypPrices->addWidget(l_priceUSDT);
+    vlaypPrices->addWidget(dsb_priceUSDT);
+    vlaypPrices->addWidget(dsb_priceRUB);
+
+    // fiat
+    auto vlayFiat= new QVBoxLayout();
+    vlayFiat->addWidget(l_cashBefore);
+    vlayFiat->addWidget(dsb_cashBefore);
+    vlayFiat->addWidget(dsb_cashAfter);
 
 
     // MAIN LAYOUT
     vlay_main = new QVBoxLayout();
     hlay_main = new QHBoxLayout();
 
-    hlay_main->addLayout(lform);
-    hlay_main->addLayout(rform);
+    hlay_main->addLayout(vlayBuySell);
+    hlay_main->addLayout(vlayFiat);
+    hlay_main->addLayout(vlayComissionSpred);
+    hlay_main->addLayout(vlaypPrices);
+
     hlay_main->addLayout(lay_other);
-    hlay_main->addLayout(bfLay);
 
     vlay_main->addWidget(l_widgetName);
     vlay_main->addLayout(hlay_main);
@@ -151,14 +158,8 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     QObject::connect(dsb_priceUSDT_RUB_market, &QDoubleSpinBox::valueChanged,
                      this, &SpredCalculatorWgt::lastPriceChanged);
 
-    QObject::connect(dsb_priceUSDT_RUB_real, &QDoubleSpinBox::valueChanged,
-                     this, &SpredCalculatorWgt::lastPriceChanged);
-
     QObject::connect(dsb_priceUSDT, &QDoubleSpinBox::valueChanged,
                      this, &SpredCalculatorWgt::lastPriceChanged);
-
-    QObject::connect(showBigButton, &QPushButton::clicked,
-                     this, &SpredCalculatorWgt::showBigPrice);
 
     QObject::connect(sellPriceFollowCheck, SIGNAL(toggled(bool)),
                      this, SLOT(sellPriceFollowCheckToggled(bool)));
@@ -183,7 +184,7 @@ void SpredCalculatorWgt::priceChanged()
 void SpredCalculatorWgt::lastPriceChanged()
 {
     dsb_priceRUB->setValue(dsb_priceUSDT->value() *
-                           (dsb_priceUSDT_RUB_market->value() + dsb_priceUSDT_RUB_real->value()) / 2);
+                           (dsb_priceUSDT_RUB_market->value()));
 }
 
 void SpredCalculatorWgt::sellPriceFollowCheckToggled(bool check)

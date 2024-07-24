@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.12.2 LANGUAGES CXX)
+project(Irken VERSION 6.12.3 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -17,11 +17,9 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Network Test Charts R
 
 include_directories(
     src
-    src/account
+    src/telegramAlert
     src/klines
     src/base
-    src/items
-    src/kunteynirs
     src/spredCalculator
     )
 
@@ -33,35 +31,21 @@ set(PROJECT_SOURCES
         src/instrumentsinfo.cpp
         src/instrumentsinfo.h
 
-        src/account/account.h
-        src/account/account.cpp
-
         src/klines/candlestickwidget.h
         src/klines/candlestickwidget.cpp
         src/klines/klinesworkingspace.h
         src/klines/klinesworkingspace.cpp
 
-        src/base/abstractitem.h
-        src/base/abstractitem.cpp
-        src/base/abstractkunteynir.h
-        src/base/abstractkunteynir.cpp
         src/base/methods.h
         src/base/methods.cpp
         src/base/requests.h
         src/base/requests.cpp
 
-        src/items/accountitem.h
-        src/items/accountitem.cpp
-        src/items/positionitem.h
-        src/items/positionitem.cpp
-
-        src/kunteynirs/accountkunteynir.h
-        src/kunteynirs/accountkunteynir.cpp
-        src/kunteynirs/positionkunteynir.h
-        src/kunteynirs/positionkunteynir.cpp
-
         src/spredCalculator/spredcalculatorwgt.cpp
         src/spredCalculator/spredcalculatorwgt.h
+
+        src/telegramAlert/telegramalert.h
+        src/telegramAlert/telegramalert.cpp
 
         README.txt
 )

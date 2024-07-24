@@ -10,6 +10,7 @@
 #include <QFormLayout>
 #include <QLCDNumber>
 #include <QCheckBox>
+#include <QAction>
 
 class SpredCalculatorWgt : public QWidget
 {
@@ -17,15 +18,10 @@ class SpredCalculatorWgt : public QWidget
 
     QLabel *l_widgetName;
     QLabel *l_buyPrice;
-    QLabel *l_sellPrice;
     QLabel *l_comission;
-    QLabel *l_spred;
     QLabel *l_cashBefore;
-    QLabel *l_cashAfter;
     QLabel *l_priceUSDT;
-    QLabel *l_priceRUB;
     QLabel *l_USDTRUB_market;
-    QLabel *l_USDTRUB_real;
 
     QDoubleSpinBox *dsb_buyPrice;
     QDoubleSpinBox *dsb_sellPrice;
@@ -36,7 +32,6 @@ class SpredCalculatorWgt : public QWidget
     QDoubleSpinBox *dsb_priceUSDT;
     QDoubleSpinBox *dsb_priceRUB;
     QDoubleSpinBox *dsb_priceUSDT_RUB_market;
-    QDoubleSpinBox *dsb_priceUSDT_RUB_real;
 
     QVBoxLayout *vlay_main;
     QHBoxLayout *hlay_main;
@@ -45,8 +40,6 @@ class SpredCalculatorWgt : public QWidget
 
     QPushButton *showBigButton;
     QCheckBox *sellPriceFollowCheck;
-
-
 
 public:
     SpredCalculatorWgt(QWidget *parent = nullptr);

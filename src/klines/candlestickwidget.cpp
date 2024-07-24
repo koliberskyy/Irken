@@ -912,18 +912,6 @@ void CandleStickWidget::keyPressEvent(QKeyEvent *event)
         }
     }
 
-    if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_B){
-        this->setCursor(Qt::ArrowCursor);
-        deactivateAllMods();
-        marketBuySellInit("Buy");
-    }
-
-    if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_S){
-        this->setCursor(Qt::ArrowCursor);
-        deactivateAllMods();
-        marketBuySellInit("Sell");
-    }
-
     if(event->modifiers() == Qt::CTRL && event->key() == Qt::Key_R){
         deactivateAllMods();
         this->setCursor(Qt::CrossCursor);
@@ -1108,271 +1096,6 @@ void CandleStickWidget::areaClicked()
 
 }
 
-void CandleStickWidget::areaDoubleClicked()
-{
-    auto snd = (QAreaSeries*)sender();
-    if(snd != nullptr){
-        auto area = findArea(snd);
-
-        QDialog dlg(this);
-        dlg.setWindowTitle(tr("My dialog"));
-
-        auto *form = new QFormLayout();
-
-        //dsb_price
-        auto dsb_price = new QDoubleSpinBox();
-        dsb_price->setDecimals(instruments::dap(currentSymbol));
-        dsb_price->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
-        dsb_price->setSingleStep(instruments::stepPrice(currentSymbol));
-        if(area->type == "im"){
-            dsb_price->setValue(area->_05());
-        }
-        else if(area->isBuyArea){
-            dsb_price->setValue(area->_07());
-        }
-        else{
-            dsb_price->setValue(area->_03());
-        }
-
-        //dsb_tp
-        auto dsb_tp = new QDoubleSpinBox();
-        dsb_tp->setDecimals(instruments::dap(currentSymbol));
-        dsb_tp->setRange(0, instruments::maxPrice(currentSymbol));
-        dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
-        if(takeProfit.series != nullptr){
-            dsb_tp->setValue(takeProfit.count);
-        }
-        else{
-            dsb_tp->setValue(0);
-        }
-
-        //dsb_sl
-        auto dsb_sl = new QDoubleSpinBox();
-        dsb_sl->setDecimals(instruments::dap(currentSymbol));
-        dsb_sl->setRange(0, instruments::maxPrice(currentSymbol));
-        dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
-
-        if(stopLoss.series != nullptr){
-            dsb_sl->setValue(stopLoss.count);
-        }
-        else{
-            dsb_sl->setValue(area->_stop());
-        }
-
-        //sb_qty
-        auto sb_qty = new QSpinBox();
-        sb_qty->setRange(0, 100);
-        sb_qty->setValue(sb_qty->maximum() / 20);
-        sb_qty->setSingleStep(1);
-
-        //sld_qty
-        auto sld_qty = new QSlider(Qt::Horizontal);
-        sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
-        sld_qty->setValue(sb_qty->value());
-        sld_qty->setSingleStep(sb_qty->singleStep());
-        QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
-        QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
-
-
-        QDoubleSpinBox* dsb_RR = nullptr;
-
-        //dsb_rr
-        if(dsb_tp->value() > 0){
-            dsb_RR = new QDoubleSpinBox();
-            dsb_RR->setRange(0, 100);
-            dsb_RR->setSingleStep(instruments::stepPrice(currentSymbol));
-            dsb_RR->setReadOnly(true);
-            dsb_RR->setValue(getRiskRatio(dsb_price->value(), dsb_sl->value(), dsb_tp->value()));
-        }
-
-        //sb_lev
-        auto sb_lev = new QSpinBox();
-        sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
-        sb_lev->setSingleStep(1);
-
-        auto slp = getStopLossPercent(dsb_price->value(), dsb_sl->value());
-        auto levCount = leverageFromSLP(slp);
-
-        if(levCount >= sb_lev->maximum())
-            sb_lev->setValue(sb_lev->maximum());
-        else
-            sb_lev->setValue(levCount);
-
-
-        //sld_lev
-        auto sld_lev = new QSlider(Qt::Horizontal);
-        sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
-        sld_lev->setValue(sb_lev->value());
-        sld_lev->setSingleStep(sb_lev->singleStep());
-        QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
-        QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
-
-        //buySellComboBox
-        auto buySellComboBox = new QComboBox();
-        buySellComboBox->addItem("Buy");
-        buySellComboBox->addItem("Sell");
-        if(area->isBuyArea){
-            buySellComboBox->setCurrentIndex(0);
-        }
-        else{
-            buySellComboBox->setCurrentIndex(1);
-        }
-
-
-        QDialogButtonBox *btn_box = new QDialogButtonBox();
-        btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-        connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-        connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-        form->addRow(new QLabel("Side"), buySellComboBox);
-        form->addRow(new QLabel("ТВХ"), dsb_price);
-        form->addRow(new QLabel("ТП"), dsb_tp);
-        form->addRow(new QLabel("СЛ"), dsb_sl);
-        form->addRow(new QLabel("%"), sb_qty);
-        form->addRow(sld_qty);
-        if(dsb_RR != nullptr){
-            form->addRow(new QLabel("RR"), dsb_RR);
-        }
-        form->addRow(new QLabel("Плечо"), sb_lev);
-        form->addRow(sld_lev);
-        form->addRow(btn_box);
-
-        dlg.setLayout(form);
-
-        // В случае, если пользователь нажал "Ok".
-        if(dlg.exec() == QDialog::Accepted) {
-            QJsonObject order;
-            order.insert("orderType", "Limit");
-            order.insert("category", "linear");
-            order.insert("symbol", currentSymbol);
-            order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_price->value())));
-            order.insert("side", buySellComboBox->currentText());
-            order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
-            order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
-            order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
-
-            if(!order["price"].toString().isEmpty())
-                emit addOrderClicked(order, sb_lev->value());
-            else
-                std::cout << "order price isEmpty\n";
-
-            dlg.deleteLater();
-        }
-    }
-}
-
-void CandleStickWidget::marketBuySellInit(const QString &side)
-{
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("My dialog"));
-
-    auto *form = new QFormLayout();
-
-
-    //dsb_tp
-    auto dsb_tp = new QDoubleSpinBox();
-    dsb_tp->setDecimals(instruments::dap(currentSymbol));
-    dsb_tp->setRange(0, instruments::maxPrice(currentSymbol));
-    dsb_tp->setSingleStep(instruments::stepPrice(currentSymbol));
-    if(takeProfit.series != nullptr){
-        dsb_tp->setValue(takeProfit.count);
-    }
-    else{
-        dsb_tp->setValue(0);
-    }
-
-    //dsb_sl
-    auto dsb_sl = new QDoubleSpinBox();
-    dsb_sl->setDecimals(instruments::dap(currentSymbol));
-    dsb_sl->setRange(instruments::minPrice(currentSymbol), instruments::maxPrice(currentSymbol));
-    dsb_sl->setSingleStep(instruments::stepPrice(currentSymbol));
-    dsb_sl->setValue(stopLoss.count);
-
-    //sb_qty
-    auto sb_qty = new QSpinBox();
-    sb_qty->setRange(0, 20);
-    sb_qty->setValue(5);
-    sb_qty->setSingleStep(1);
-
-    //sld_qty
-    auto sld_qty = new QSlider(Qt::Horizontal);
-    sld_qty->setRange(sb_qty->minimum(), sb_qty->maximum());
-    sld_qty->setValue(sb_qty->value());
-    sld_qty->setSingleStep(sb_qty->singleStep());
-    QObject::connect(sld_qty, SIGNAL(valueChanged(int)), sb_qty, SLOT(setValue(int)));
-    QObject::connect(sb_qty, SIGNAL(valueChanged(int)), sld_qty, SLOT(setValue(int)));
-
-
-    QDoubleSpinBox* dsb_RR = nullptr;
-
-    //dsb_rr
-    if(dsb_tp->value() > 0){
-        dsb_RR = new QDoubleSpinBox();
-        dsb_RR->setRange(0, 100);
-        dsb_RR->setSingleStep(instruments::stepPrice(currentSymbol));
-        dsb_RR->setReadOnly(true);
-        dsb_RR->setValue(getRiskRatio(currentPrice.count, dsb_sl->value(), dsb_tp->value()));
-    }
-
-    //sb_lev
-    auto sb_lev = new QSpinBox();
-    sb_lev->setRange(1, instruments::maxLeverage(currentSymbol.toUtf8()));
-    sb_lev->setSingleStep(1);
-
-    auto slp = getStopLossPercent(currentPrice.count, dsb_sl->value());
-    auto levCount = leverageFromSLP(slp);
-
-    if(levCount >= sb_lev->maximum())
-        sb_lev->setValue(sb_lev->maximum());
-    else
-        sb_lev->setValue(levCount);
-
-    //sld_lev
-    auto sld_lev = new QSlider(Qt::Horizontal);
-    sld_lev->setRange(sb_lev->minimum(), sb_lev->maximum());
-    sld_lev->setValue(sb_lev->value());
-    sld_lev->setSingleStep(sb_lev->singleStep());
-    QObject::connect(sld_lev, SIGNAL(valueChanged(int)), sb_lev, SLOT(setValue(int)));
-    QObject::connect(sb_lev, SIGNAL(valueChanged(int)), sld_lev, SLOT(setValue(int)));
-
-
-    QDialogButtonBox *btn_box = new QDialogButtonBox();
-    btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    form->addRow(new QLabel(side));
-    form->addRow(new QLabel("ТП"), dsb_tp);
-    form->addRow(new QLabel("СЛ"), dsb_sl);
-    form->addRow(new QLabel("%"), sb_qty);
-    form->addRow(sld_qty);
-    if(dsb_RR != nullptr){
-        form->addRow(new QLabel("RR"), dsb_RR);
-    }
-    form->addRow(new QLabel("Плечо"), sb_lev);
-    form->addRow(sld_lev);
-    form->addRow(btn_box);
-
-    dlg.setLayout(form);
-
-    // В случае, если пользователь нажал "Ok".
-    if(dlg.exec() == QDialog::Accepted) {
-        QJsonObject order;
-        order.insert("category", "linear");
-        order.insert("symbol", currentSymbol);
-        order.insert("orderType", "Market");
-        order.insert("side", side);
-        order.insert("stopLoss", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_sl->value())));
-        order.insert("takeProfit", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, dsb_tp->value())));
-        order.insert("qty", QString::fromStdString(std::to_string(sb_qty->value())));
-        order.insert("price", QString::fromUtf8(instruments::double_to_utf8(currentSymbol.toUtf8(), instruments::Filter_type::price, currentPrice.count)));
-        emit addOrderClicked(order, sb_lev->value());
-
-        dlg.deleteLater();
-    }
-}
 
 void CandleStickWidget::showToolTip(const QPointF &point)
 {
@@ -1393,7 +1116,7 @@ void CandleStickWidget::updateCurrentChart()
         auto do_nothing = true;
         QJsonArray klines;
         while(klines.isEmpty())
-                klines = Klines::downloadKlines(currentSymbol, currentTimeframe, "1");
+                klines = Klines::downloadKlines(currentSymbol, currentTimeframe, "2");
 
         auto set = Klines::toQCandlestickSetPtr(klines.begin()->toArray());
 
@@ -1404,6 +1127,7 @@ void CandleStickWidget::updateCurrentChart()
         }
         else if(klinesUpdated){
             klinesSeries->append(set);
+            emit klineAdded(currentSymbol, currentTimeframe, klines);
         }
 
         //curr price line
@@ -1445,6 +1169,8 @@ void CandleStickWidget::updateCurrentChart()
         newCurrPriceSer->setVisible(true);
 
         emit currentPriceChanged(currentPrice.count);
+
+
     }
 }
 
@@ -1538,8 +1264,8 @@ void CandleStickWidget::setKlines(const QString &symbol, const QString &interval
         axisY = setAxisY(klinesSeries, chart);
 
         addExistSerieses();
-
         setChart(chart);
+
     }
     else{
         chart->removeAllSeries();
@@ -1736,7 +1462,6 @@ void CandleStickWidget::addArea(qreal high, qreal low, qreal beginTimeStamp, boo
     area.attachAxis(axisX, axisY);
 
     areas[currentSymbol].append(area);
-    QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
     QObject::connect(area.series, SIGNAL(clicked(const QPointF &)), this, SLOT(showToolTip(const QPointF &)));
 
 
@@ -1818,7 +1543,6 @@ void CandleStickWidget::addArea(AbstractArea area, const QColor &color, const QS
 
     areas[currentSymbol].append(area);
 
-    QObject::connect(area.series, SIGNAL(doubleClicked(const QPointF &)), this, SLOT(areaDoubleClicked()));
     QObject::connect(area.series, SIGNAL(clicked(const QPointF &)), this, SLOT(showToolTip(const QPointF &)));
 
 
@@ -1941,19 +1665,19 @@ void CandleStickWidget::addExistSerieses()
     auto highCopy = hightsList[currentSymbol];
     hightsList[currentSymbol].clear();
     for(auto &it : highCopy){
-        addHigh(it.count, it.timestamp);
+        addHigh(it.count, it.timestamp, it.endtimestamp);
     }
 
     auto lowCopy = lowsList[currentSymbol];
     lowsList[currentSymbol].clear();
     for(auto &it : lowCopy){
-        addLow(it.count, it.timestamp);
+        addLow(it.count, it.timestamp, it.endtimestamp);
     }
 
     auto areasCopy = areas[currentSymbol];
     areas[currentSymbol].clear();
     for(auto &it : areasCopy){
-        addArea(it.high, it.low, it.timestamp, it.isBuyArea);
+        addArea(it.high, it.low, it.timestamp, it.isBuyArea, it.endtimestamp);
     }
 }
 
