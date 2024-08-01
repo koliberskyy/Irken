@@ -41,7 +41,7 @@ void TelegramAlert::updateKlines(QString symbol, QString interval, QJsonArray kl
             lastSendedTimestamp = time(cheakableKline);
             text.append(upDown);
             text.append(QString::fromStdString(std::to_string(difference)));
-            Requests::get(host, QString("/sendMessage?chat_id=" + chat_id + "&text=" + text).toUtf8());
+            Requests::get(host, QString("/sendMessage?chat_id=" + chat_id + "&text=" + text + "-tf-" + interval + "m").toUtf8());
         }
 
     }

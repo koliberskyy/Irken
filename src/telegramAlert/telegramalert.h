@@ -14,7 +14,7 @@ public:
     explicit TelegramAlert(QWidget *parent = nullptr);
 private:
     QCheckBox *enabledCheck;
-    double alertDifference{0.5};
+    double alertDifference{0.9};
     long long lastSendedTimestamp{0};
 public slots:
     void updateKlines(QString symbol, QString interval, QJsonArray klines);
