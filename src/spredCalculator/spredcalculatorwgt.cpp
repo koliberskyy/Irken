@@ -207,13 +207,13 @@ void SpredCalculatorWgt::updatePrice(double price)
 void SpredCalculatorWgt::showBigPrice()
 {
     auto lcd = new QLCDNumber();
-    lcd->setWindowFlag(Qt::WindowStaysOnTopHint);
     lcd->display(dsb_priceRUB->value());
-    lcd->setDigitCount(16);
+    lcd->setDigitCount(10);
 
     QObject::connect(dsb_priceRUB, SIGNAL(valueChanged(double)),
                      lcd, SLOT(display(double)));
 
     lcd->setMinimumSize(800, 200);
+    lcd->setWindowFlag(Qt::WindowStaysOnTopHint);
     lcd->show();
 }
