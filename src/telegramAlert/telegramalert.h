@@ -12,6 +12,7 @@ class TelegramAlert : public QWidget
     Q_OBJECT
 public:
     explicit TelegramAlert(QWidget *parent = nullptr);
+
     /*
         :param desired_amount:
         :param base_currency_code: TON | BTC

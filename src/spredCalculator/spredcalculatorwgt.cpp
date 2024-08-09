@@ -16,12 +16,16 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     dsb_buyPrice->setSingleStep(0.001);
     dsb_buyPrice->setDecimals(3);
 
+    autoPriceBuyCheck = new QCheckBox("auto");
+
     // SELL PRICE
     dsb_sellPrice = new QDoubleSpinBox();
     dsb_sellPrice->setMinimum(0.0);
     dsb_sellPrice->setMaximum(10'000'000);
     dsb_sellPrice->setSingleStep(0.001);
     dsb_sellPrice->setDecimals(3);
+
+    autoPriceSellCheck = new QCheckBox("auto");
 
     // COMISSION
     dsb_comission = new QDoubleSpinBox();
@@ -73,12 +77,12 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
                      this, &SpredCalculatorWgt::showBigPrice);
 
     // USDT-RUB
-    dsb_priceUSDT_RUB_market = new QDoubleSpinBox();
-    dsb_priceUSDT_RUB_market->setMinimum(0.0);
-    dsb_priceUSDT_RUB_market->setMaximum(10'000'000);
-    dsb_priceUSDT_RUB_market->setDecimals(2);
-    dsb_priceUSDT_RUB_market->setValue(90.0);
+    dsb_priceUSDT_RUB_min = new QDoubleSpinBox();
+    dsb_priceUSDT_RUB_min->setDecimails(2);
+    dsb_priceUSDT_RUB_max = new QDoubleSpinBox();
+    dsb_priceUSDT_RUB_max->setDecimails(2);
 
+    autoPriceUSDTCheck = new QCheckBox("auto");
 
 
     // SHOW BIG BUTTON
@@ -89,22 +93,20 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
 
 
 
-
-
-
     // ***************** MAPPING ***************
 
     // OTHER LAYOUT
     auto lay_other = new QVBoxLayout();
     lay_other->addWidget(l_USDTRUB_market);
-    lay_other->addWidget(dsb_priceUSDT_RUB_market);
-    lay_other->addWidget(sellPriceFollowCheck);
+    lay_other->addWidget(autoPriceUSDTCheck);
+    lay_other->addWidget(dsb_priceUSDT_RUB_min);
+    lay_other->addWidget(dsb_priceUSDT_RUB_max);
 
     // buy sell price
-    auto vlayBuySell = new QVBoxLayout();
-    vlayBuySell->addWidget(l_buyPrice);
-    vlayBuySell->addWidget(dsb_buyPrice);
-    vlayBuySell->addWidget(dsb_sellPrice);
+    auto vlayBuySell = new QFormLayout();
+    vlayBuySell->addRow(l_buyPrice);
+    vlayBuySell->addRow(autoBuyPriceCheck, dsb_buyPrice);
+    vlayBuySell->addRow(autoSellPriceCheck, dsb_sellPrice);
 
     // comission, spred
     auto vlayComissionSpred = new QVBoxLayout();
@@ -155,9 +157,6 @@ SpredCalculatorWgt::SpredCalculatorWgt(QWidget *parent)
     QObject::connect(dsb_comission, &QDoubleSpinBox::valueChanged,
                      this, &SpredCalculatorWgt::priceChanged);
 
-    QObject::connect(dsb_priceUSDT_RUB_market, &QDoubleSpinBox::valueChanged,
-                     this, &SpredCalculatorWgt::lastPriceChanged);
-
     QObject::connect(dsb_priceUSDT, &QDoubleSpinBox::valueChanged,
                      this, &SpredCalculatorWgt::lastPriceChanged);
 
@@ -177,14 +176,15 @@ void SpredCalculatorWgt::priceChanged()
         auto spred{100 * (after - before) / before};
         dsb_spred->setValue(spred);
         dsb_cashAfter->setValue(after);
-
     }
 }
 
 void SpredCalculatorWgt::lastPriceChanged()
 {
-    dsb_priceRUB->setValue(dsb_priceUSDT->value() *
-                           (dsb_priceUSDT_RUB_market->value()));
+    if(!inverceTrigger)
+	dsb_priceRUB->setValue(dsb_priceUSDT->value() * (dsb_priceUSDT_RUB_max->value()));
+    else
+	dsb_priceRUB->setValue(dsb_priceUSDT->value() * (dsb_priceUSDT_RUB_min->value()));
 }
 
 void SpredCalculatorWgt::sellPriceFollowCheckToggled(bool check)
@@ -216,4 +216,35 @@ void SpredCalculatorWgt::showBigPrice()
     lcd->setMinimumSize(800, 200);
     lcd->setWindowFlag(Qt::WindowStaysOnTopHint);
     lcd->show();
+}
+
+void SpredCalculatorWgt::setUSDTPrice(QJsonArray orders)
+{
+    if(!orders.isEmpty()){
+    	double price{0.0};
+
+	for(const auto &it : orders){
+	    auto currPrice = it.toObject()["price"].toObject()["value"].toString().toDouble();
+	    price += currPrice;
+	}
+
+	price /= orders.size();
+    
+	if(orders.begin()->toObject()["price"].toObject()["baseCurrencyCode"].toString() == "USDT"){    
+            if(orders.begin()->toObject()["type"].toString() == "SALE")
+                dsb_priceUSDT_max->setValue(price);
+	    else
+	        dsb_priceUSDT_min->setValue(price);
+	}
+	else{
+	    if(price <= dsb_priceRUB){
+	        dsb_buyPrice->setValue(price);
+		inverceTrigger = false;
+	    }
+	    else{
+	        dsb_sellPrice->setValue(price);
+		inverceTrigger = true;
+	    }
+	}
+    } 
 }

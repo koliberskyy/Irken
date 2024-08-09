@@ -31,15 +31,19 @@ class SpredCalculatorWgt : public QWidget
     QDoubleSpinBox *dsb_cashAfter;
     QDoubleSpinBox *dsb_priceUSDT;
     QDoubleSpinBox *dsb_priceRUB;
-    QDoubleSpinBox *dsb_priceUSDT_RUB_market;
+    QDoubleSpinBox *dsb_priceUSDT_RUB_min;
+    QDoubleSpinBox *dsb_priceUSDT_RUB_max;
 
     QVBoxLayout *vlay_main;
     QHBoxLayout *hlay_main;
-    QFormLayout *lform;
-    QFormLayout *rform;
 
     QPushButton *showBigButton;
     QCheckBox *sellPriceFollowCheck;
+    QCheckBox *autoPriceBuyCheck;
+    QCheckBox *autoPriceSellCheck;
+    QCheckBox *autoPriceUSDTCheck;
+
+    bool inverseTrigger{true};
 
 public:
     SpredCalculatorWgt(QWidget *parent = nullptr);
@@ -49,6 +53,8 @@ private slots:
     void priceChanged();
     void lastPriceChanged();
     void sellPriceFollowCheckToggled(bool check);
+    void setPrice(QJsonArray tgOrderList);
+    
 public slots:
     void updatePrice(double price);
     void showBigPrice();

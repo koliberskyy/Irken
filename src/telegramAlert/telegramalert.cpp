@@ -38,8 +38,7 @@ QJsonArray TelegramAlert::getAvaibleOrders(const QString &baseCoin, const QStrin
     request.setUrl(url);
 
     auto reply = Requests::post(request, QJsonDocument(dataObj).toJson());
-    auto breakpoint = true;
-
+    return reply["data"].toArray();
 }
 
 void TelegramAlert::updateKlines(QString symbol, QString interval, QJsonArray klines)
