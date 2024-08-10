@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Irken VERSION 6.12.4 LANGUAGES CXX)
+project(Irken VERSION 6.13.0 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -8,44 +8,25 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-#использую 17й стандарт для корректной работы смарт поинтеров без использования make_unique[_shared]<>
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Core Network Test Charts REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Core Network Test Charts REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Network REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network REQUIRED)
 
 include_directories(
     src
-    src/telegramAlert
-    src/klines
-    src/base
-    src/spredCalculator
+    src/AbstractRequests
     )
 
 set(PROJECT_SOURCES
         src/main.cpp
-        src/mainwindow.cpp
-        src/mainwindow.h
-        src/settings.h
-        src/instrumentsinfo.cpp
-        src/instrumentsinfo.h
 
-        src/klines/candlestickwidget.h
-        src/klines/candlestickwidget.cpp
-        src/klines/klinesworkingspace.h
-        src/klines/klinesworkingspace.cpp
-
-        src/base/methods.h
-        src/base/methods.cpp
-        src/base/requests.h
-        src/base/requests.cpp
-
-        src/spredCalculator/spredcalculatorwgt.cpp
-        src/spredCalculator/spredcalculatorwgt.h
-
-        src/telegramAlert/telegramalert.h
-        src/telegramAlert/telegramalert.cpp
+		src/CoinState.h
+		src/config.h
+		src/irkenArbitrageScaner.h
+		
+		src/AbstractRequests/abstractrequests.h
 
         README.txt
 )
@@ -74,11 +55,9 @@ else()
 endif()
 
 target_link_libraries(Irken
-    PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
+    PRIVATE 
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Network
-    Qt${QT_VERSION_MAJOR}::Test
-    Qt${QT_VERSION_MAJOR}::Charts
     Threads::Threads)
 set_target_properties(Irken PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

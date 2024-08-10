@@ -62,8 +62,8 @@ public:
     }
 
     template<typename Host_str, typename Path_str>
-    void sendPost(Host_str host, Path_str path, QByteArray &&data, QString scheme = "https",
-				  std::vector<std::pair<QByteArray,QByteArray>> &headers)
+    void sendPost(Host_str host, Path_str path, QByteArray &&data, QString scheme,
+				 const std::vector<std::pair<QByteArray, QByteArray>> &headers)
     {
         QUrl url;
 
@@ -74,7 +74,7 @@ public:
 		QNetworkRequest request(std::move(url));
 		for(const auto &it : headers)
 		{
-			request.setRawHeader(it.first(), it.second());
+			request.setRawHeader(it.first, it.second);
 		}
 
         POST(std::move(request), std::move(data));

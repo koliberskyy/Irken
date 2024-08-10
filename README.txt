@@ -1,10 +1,15 @@
 #Irken
+Иркен - инструмент автоматизации рутинных процессов в розничной криптовалютной торговле.
 (Находится в разработке)
 
-Актуальная рабочая версия в ветке master
+Актуальная Desktop версия в ветке master
 ДЛЯ ЗАПУСКА ТРЕБУЕТСЯ ИНТЕРНЕТ
 
-Иркен - инструмент автоматизации рутинных процессов в розничной криптовалютной торговле.
+10.08.24 VERSION 6.13.0-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
+	MAJOR PROJECT REBUILD 
+	+ UI has removed
+	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
+	+ user friendly telegram alerts with spred chain information
 
 **************************CHANGE LOG*********************************
 # 10.03.2024 VERSION 6.4.0:
@@ -98,3 +103,11 @@
     + рестайлинг калькулятора спреда
     + выпилен ВЕСЬ устаревший функционал
     + бетка telegramAlerts
+
+10.08.24 VERSION 6.13.0-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
+	MAJOR PROJECT REBUILD 
+	+ UI has removed
+	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
+	+ user friendly telegram alerts with spred chain information
+	+ all private information (etc. api tokens) placed in one file
+
