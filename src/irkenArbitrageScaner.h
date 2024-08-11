@@ -7,13 +7,13 @@ class IrkenArbitrageScaner : public QObject
 {
 	Q_OBJECT
 
-	static const std::array<QString, 3> coins
+    inline static const std::array<QString, 3> coins
 	{
 		"NOT",
 		"TON",
 		"BTC"
 	};
-	static const QString coinBase {"USDT"};
+    inline static const QString coinBase {"USDT"};
 	std::shared_ptr<CoinState> usdtState;
 	std::vector<std::shared_ptr<CoinState>> states;
 	std::shared_ptr<QNetworkAccessManager> manager;
@@ -41,6 +41,8 @@ public:
 
 			states.push_back(tmp);
 		}
+
+        upd();
 	}
 
 public slots:
@@ -55,7 +57,7 @@ public slots:
 	QEventLoop loop;
 	QTimer timer;
 
-    QObject::connect(usdtState, &CoinState::updatingComplete, &loop, &QEventLoop::quit);
+    QObject::connect(usdtState.get(), &CoinState::updatingComplete, &loop, &QEventLoop::quit);
 	QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 	
 	emit updateUSDT();
@@ -69,26 +71,28 @@ public slots:
 private slots:
 	void sendResult()
 	{
-		auto snd = std::dynamic_cast<CoinState>(sender());
-		auto chain = snd->getChain(usdtState->getState());
+        auto snd = dynamic_cast<CoinState*>(QObject::sender());
+        if(snd != nullptr)
+        {
+            auto chain = snd->getChain(usdtState->getState());
 
-		auto message = snd->getCoinName();
-		message.append("\n");
-		for(const auto &it : chain)
-		{
-			message.append(it.toUserNative());
-			message.append("_________\n");
-		}
-		message.append("usdt \nBuy - ");
-		message.append(std::to_string(usdtState.getState.tgBuy);
-		message.append("\nSell - ");
-		message.append(std::to_string(usdtState.getState.tgSell);
-		message.append("_________\n");
+            auto message = snd->getCoinName();
+            message.append("\n");
+            for(const auto &it : chain)
+            {
+                message.append(it.toUserNative());
+                message.append("_________\n");
+            }
+            message.append("usdt \nBuy - ");
+            message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
+            message.append("\nSell - ");
+            message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
+            message.append("_________\n");
 
-		QString tgChatId{"-1001964821237"};
-		snd.sendGet("https://api.telegram.org", 
-					config::tgBotToken() + "/sendMessage?",
-					"chat_id=" + config::tgChatId() + "&text=" + message);
+            snd->sendGet("https://api.telegram.org",
+                        config::tgBotToken() + "/sendMessage?",
+                        "chat_id=" + config::tgChatId() + "&text=" + message);
+        }
 	}	
 
 signals:

@@ -86,7 +86,7 @@ signals:
     void networkReplyFinished();
 
 protected:
-    virtual void parceNetworkReply(QNetworkRequest &&request, QNetworkReply::NetworkError &&error, QByteArray &&reply) = 0;
+    virtual void parceNetworkReply(QNetworkRequest request, QNetworkReply::NetworkError error, QByteArray reply) = 0;
 
 protected slots:
     void replyFinished()

@@ -1,11 +1,15 @@
 #ifndef COIN_STATE_H
-#define COIN_STATE_H 
+#define COIN_STATE_H
+
+#define DEBUG
 
 #include <QObject>
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QEventLoop>
+#include <QTimer>
 
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -14,6 +18,7 @@
 #include <vector>
 #include <QString>
 #include <QByteArray>
+#include <iostream>
 
 #include <memory>
 
@@ -72,7 +77,8 @@ namespace market
 
 class CoinState : public AbstractRequests
 {
-	Q_OBJECT
+    Q_OBJECT
+
 	const QString coinName;
 	State state; 	
 	
@@ -177,17 +183,20 @@ private:
 	}
 
 protected slots:
-	virtual void parceNetworkReply(	QNetworkRequest &&request, 
-									QNetworkReply::NetworkError &&error, 
-									QByteArray &&reply) final
+    virtual void parceNetworkReply(	QNetworkRequest request,
+                                    QNetworkReply::NetworkError error,
+                                    QByteArray reply) final
 	{
+
+        auto url = request.url();
+        auto path = url.path();
+        auto doc = QJsonDocument::fromJson(std::move(reply));
+        auto headers = request.rawHeaderList();
+        auto header1 = request.rawHeader(headers.at(0));
+        auto header2 = request.rawHeader(headers.at(1));
 
 		if(error == QNetworkReply::NoError)
 		{
-			auto url = request.url();
-			auto path = url.path();
-			auto doc = QJsonDocument::fromJson(std::move(reply));
-
 			if(path == "/p2p/public-api/v2/offer/depth-of-market?")
 			{
 				parce_tgOrders(doc.object()["data"].toObject());
@@ -220,12 +229,11 @@ protected slots:
 		dataObj.insert("offerType", offerType);
 		dataObj.insert("limit", limit);
 
-		QString authToken("Bearer ");
-		authToken.append( config::tgAuthToken());
+        QString authToken(config::tgAuthToken());
 
-		std::vector<std::pair<QByteArray, QByteArray> headers;
+        std::vector<std::pair<QByteArray, QByteArray>> headers;
 			headers.push_back(std::make_pair<QByteArray, QByteArray>("content-type", "application/json"));
-			headers.push_back(std::make_pair<QByteArray, QByteArray>,("authorization", (authToken.toUtf8());
+            headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", (authToken.toUtf8())));
 		sendPost(	"walletbot.me", 
 					"/p2p/public-api/v2/offer/depth-of-market?", 
 					QJsonDocument(dataObj).toJson(),
