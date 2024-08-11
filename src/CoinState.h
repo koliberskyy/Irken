@@ -286,7 +286,7 @@ protected slots:
             if(path == "/p2p/public-api/v2/offer/depth-of-market")
 			{
                 tokenGenMutex.lock();
-                if(!(*tokenUpdated))
+                if((*tokenUpdated))
                     *tokenUpdated = false;
                 tokenGenMutex.unlock();
 
