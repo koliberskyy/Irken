@@ -13,6 +13,7 @@
 class AbstractRequests : public QObject
 {
     Q_OBJECT
+
     std::shared_ptr<QNetworkAccessManager> manager;
 
 public:
@@ -20,7 +21,7 @@ public:
 	: QObject(parent)
     {
         if(__manager == nullptr){
-            manager = std::make_shared<QNetworkAccessManager>();
+            manager = std::make_shared<QNetworkAccessManager>(nullptr);
         }
         else{
             manager = __manager;
@@ -71,13 +72,14 @@ public:
         url.setHost(std::forward<Host_str>(host));
         url.setPath(std::forward<Path_str>(path));
 
-		QNetworkRequest request(std::move(url));
-		for(const auto &it : headers)
-		{
-			request.setRawHeader(it.first, it.second);
-		}
+        QNetworkRequest request;
+        for(const auto &it : headers)
+        {
+            request.setRawHeader(it.first, it.second);
+        }
+        request.setUrl(std::move(url));
 
-        POST(std::move(request), std::move(data));
+        POST(std::move(request), std::forward<QByteArray>(data));
     }
 signals:
     /*
@@ -107,7 +109,7 @@ private:
     
 	void POST(QNetworkRequest &&request, QByteArray &&data) 
     {
-        auto reply = manager->post(std::move(request), std::move(data));
+        auto reply = manager->post(std::move(request), std::forward<QByteArray>(data));
         QObject::connect(reply, &QNetworkReply::finished,
                          this, &AbstractRequests::replyFinished);
     }

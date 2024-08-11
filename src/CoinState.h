@@ -36,6 +36,10 @@ namespace market
 		double tgBuy{0.0};	// best buy price rub from tg
 		double tgSell{0.0}; // best sell price rub from tg
 		double bbUsdt{0.0};	// market COINUSDT pair price from bybit[another market]
+
+        auto buy()const{if (tgBuy < tgSell) return tgBuy; else return tgSell;}
+        auto sell()const{if (tgBuy > tgSell) return tgBuy; else return tgSell;}
+
 	};
 
 	struct Chain
@@ -55,7 +59,7 @@ namespace market
 		QString toUserNative() const
 		{
 			QString reply;
-			reply.append("SPRED - ");
+            reply.append("SPRED: ");
 			reply.append(QString::fromStdString(std::to_string(spred())));
 			reply.append(".\n");
 
@@ -85,14 +89,56 @@ class CoinState : public AbstractRequests
 	void parce_tgOrders(QJsonObject &&orders)
 	{
 		//set tgBuy || tgSell
-		state.tgBuy = 1.0;
-		state.tgSell = 10.0;
+        if(orders["status"] == "SUCCESS"){
+            auto data = orders["data"].toArray();
+            auto type = data.begin()->toObject()["type"].toString();
+            double midPrice{0.0};
+            int ordersCount{0};
+            for(const auto it : data)
+            {
+                auto obj =  it.toObject();
+                auto price = obj["price"].toObject()["value"].toString().toDouble();
+                auto minLimitRub = obj["orderVolumeLimits"].toObject()["min"].toString().toDouble() * price;
+                auto maxLimitRub = obj["orderVolumeLimits"].toObject()["max"].toString().toDouble() * price;
+                auto paymentMethods = obj["paymentMethods"].toArray();
+                auto paymentMethodGood{true};
+                for(const auto pay : paymentMethods){
+                    auto payObj = pay.toObject();
+                    auto code = payObj["code"];
+                    if(code == "payeer" || code == "yoomoney"){
+                        paymentMethodGood = false;
+                        break;
+                    }
+                }
+                if(minLimitRub < 15'000 && maxLimitRub < 100'000 && paymentMethodGood)
+                {
+                    midPrice += price;
+                    ordersCount++;
+                }
+            }
+
+            midPrice /= ordersCount;
+
+            if(type == "SALE")
+            {
+                state.tgSell = midPrice;
+            }
+            else if(type == "PURCHASE")
+            {
+                state.tgBuy = midPrice;
+            }
+        }
+        else{
+
+        }
 	}
 
-	void parce_bbKline(QJsonArray&& allKlines)
+    void parce_bbKline(QJsonObject&& allKlines)
 	{
-		// set bbUsdt
-		state.bbUsdt = 0.001345;
+        auto kline = allKlines["result"].toObject()["list"].toArray().begin()->toArray();
+        if(!kline.isEmpty()){
+            state.bbUsdt = kline[4].toString().toDouble();
+        }
 	}
 
 
@@ -140,16 +186,16 @@ public:
 	{
 		std::vector<Chain> reply;
 
-		reply.emplace_back(Chain{	market::tg, state.tgBuy, 
-									market::tg, state.tgSell});
+        reply.emplace_back(Chain{	market::tg, state.buy(),
+                                 market::tg, state.sell()});
 
 		if(state.bbUsdt != 0.0)
 		{
-			reply.emplace_back(Chain{	market::tg, state.tgBuy, 
-										market::bb, state.bbUsdt * usdtState.tgSell});
-		
-			reply.emplace_back(Chain{	market::bb, state.bbUsdt * usdtState.tgBuy, 
-										market::tg, state.tgSell});
+            reply.emplace_back(Chain{	market::tg, state.buy(),
+                                     market::bb, state.bbUsdt * usdtState.sell()});
+
+            reply.emplace_back(Chain{	market::bb, state.bbUsdt * usdtState.buy(),
+                                     market::tg, state.sell()});
 		}
 
 		return std::move(reply);
@@ -168,13 +214,23 @@ public slots:
 
 private:
 	void updateTgBuy()
-	{ 
-		getAvaibleTgOrders(QString("RUB"), coinName, QString("PRUSHARE"), "10");
+    {
+        if(coinName == "USDT"){
+            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "30");
+        }
+        else{
+            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "10");
+        }
 	}
 	
 	void updateTgSell()
 	{
-		getAvaibleTgOrders(QString("RUB"), coinName, QString("SELL"), "10");
+        if(coinName == "USDT"){
+            getAvaibleTgOrders("RUB", coinName, "SALE", "30");
+        }
+        else{
+            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "10");
+        }
 	}
 
 	void updateBB()
@@ -191,52 +247,72 @@ protected slots:
         auto url = request.url();
         auto path = url.path();
         auto doc = QJsonDocument::fromJson(std::move(reply));
-        auto headers = request.rawHeaderList();
-        auto header1 = request.rawHeader(headers.at(0));
-        auto header2 = request.rawHeader(headers.at(1));
 
 		if(error == QNetworkReply::NoError)
 		{
-			if(path == "/p2p/public-api/v2/offer/depth-of-market?")
+            if(path == "/p2p/public-api/v2/offer/depth-of-market")
 			{
-				parce_tgOrders(doc.object()["data"].toObject());
-			}
-
-			else if(path == "/v5/market/kline?")
-			{
-				parce_bbKline(doc.array());
-			}
-		}
-
-		if(this->isUpdated())
-		{
+                parce_tgOrders(doc.object());
+                if(this->isUpdated())
+                {
 #ifdef DEBUG
 
-	std::cout << coinName.toStdString() + " has updated...\n";
+                    std::cout << coinName.toStdString() + " has updated...\n";
 #endif
-			emit updatingComplete();
+                    emit updatingComplete();
+                }
+			}
+
+            else if(path == "/v5/market/kline")
+			{
+                parce_bbKline(doc.object());
+                if(this->isUpdated())
+                {
+#ifdef DEBUG
+
+                    std::cout << coinName.toStdString() + " has updated...\n";
+#endif
+                    emit updatingComplete();
+                }
+			}
 		}
+        else
+        {
+            std::cout << "request error - code: " << error << "\n";
+        }
+
+
 	}
-	
+
+    /*
+        :param desired_amount:
+        :param base_currency_code: TON | BTC
+        :param quote_currency_code: RUB | KZT etc.
+        :param offer_type: SALE | PURCHASE
+        :param limit:
+    */
 	void getAvaibleTgOrders(	const QString &baseCoin, 
 								const QString &quoteCoin, 
 								const QString &offerType, 
 								const QString &limit) 
 	{
 		QJsonObject dataObj;
-   		dataObj.insert("baseCurrencyCode", quoteCoin);
-   		dataObj.insert("quoteCurrencyCode", baseCoin);
-		dataObj.insert("offerType", offerType);
-		dataObj.insert("limit", limit);
+        dataObj.insert("baseCurrencyCode", quoteCoin);
+        dataObj.insert("quoteCurrencyCode", baseCoin);
+        dataObj.insert("offerType", offerType);
+        dataObj.insert("limit", limit);
+        dataObj.insert("desired_amount", "2");
 
-        QString authToken(config::tgAuthToken());
+
+        QString authToken("Bearer " + config::tgAuthToken());
 
         std::vector<std::pair<QByteArray, QByteArray>> headers;
 			headers.push_back(std::make_pair<QByteArray, QByteArray>("content-type", "application/json"));
-            headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", (authToken.toUtf8())));
+        headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", authToken.toUtf8()));
+
 		sendPost(	"walletbot.me", 
-					"/p2p/public-api/v2/offer/depth-of-market?", 
-					QJsonDocument(dataObj).toJson(),
+                    "/p2p/public-api/v2/offer/depth-of-market",
+                    QJsonDocument(dataObj).toJson(QJsonDocument::Compact),
 					"https",
 					headers);
 	}
@@ -247,7 +323,7 @@ protected slots:
 						"&interval=" + interval+ 
 						"&limit=" +limit);
 
-		sendGet("api.bybit.com", "/v5/market/kline?", std::move(query));
+        sendGet("api.bybit.com", "/v5/market/kline", std::move(query));
 	}
 signals:
 	void updatingComplete();

@@ -21,8 +21,9 @@ class IrkenArbitrageScaner : public QObject
 public:
 	explicit IrkenArbitrageScaner(QObject *parent = nullptr):
 		QObject(parent),
-		manager{std::make_shared<QNetworkAccessManager>()}
+        manager{std::make_shared<QNetworkAccessManager>(nullptr)}
 	{
+
 
 		usdtState = std::make_shared<CoinState>(coinBase, manager);
 		QObject::connect(this, &IrkenArbitrageScaner::updateUSDT,
@@ -87,10 +88,10 @@ private slots:
             message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
             message.append("\nSell - ");
             message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
-            message.append("_________\n");
+            message.append("\n_________\n");
 
-            snd->sendGet("https://api.telegram.org",
-                        config::tgBotToken() + "/sendMessage?",
+            snd->sendGet("api.telegram.org",
+                        config::tgBotToken() + "/sendMessage",
                         "chat_id=" + config::tgChatId() + "&text=" + message);
         }
 	}	
