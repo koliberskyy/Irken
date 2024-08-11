@@ -18,23 +18,29 @@ class IrkenArbitrageScaner : public QObject
 	std::vector<std::shared_ptr<CoinState>> states;
 	std::shared_ptr<QNetworkAccessManager> manager;
     std::unique_ptr<QDateTime>       updateTime;
+    std::shared_ptr<QString> authToken;
+    std::shared_ptr<bool> tokenUpdated;
+
 
 public:
 	explicit IrkenArbitrageScaner(QObject *parent = nullptr):
 		QObject(parent),
         manager{std::make_shared<QNetworkAccessManager>(nullptr)},
-        updateTime(new QDateTime(QDateTime::currentDateTime()))
+        updateTime(new QDateTime(QDateTime::currentDateTime())),
+        authToken{std::make_shared<QString>("")},
+        tokenUpdated{std::make_shared<bool>(false)}
 	{
 
 
-		usdtState = std::make_shared<CoinState>(coinBase, manager);
+        usdtState = std::make_shared<CoinState>(coinBase, authToken, tokenUpdated, manager);
 		QObject::connect(this, &IrkenArbitrageScaner::updateUSDT,
 						usdtState.get(), &CoinState::upd);
+        usdtState->getAuthToken();
 		
 		//make states
 		for(const auto &it : coins)
 		{
-			auto tmp = std::make_shared<CoinState>(it, manager);
+            auto tmp = std::make_shared<CoinState>(it, authToken, tokenUpdated, manager);
 
 			QObject::connect(tmp.get(), &CoinState::updatingComplete,
 							this, &IrkenArbitrageScaner::sendResult);
@@ -84,27 +90,33 @@ private slots:
         {
             auto chain = snd->getChain(usdtState->getState());
 
-            auto message = snd->getCoinName();
-            message.append("\n");
             Chain actual = *(chain.begin());
             for(const auto &it : chain)
             {
                 if(it.spred() > actual.spred())
                     actual = it;
             }
-            message.append(actual.toUserNative());
-            message.append("_________\n");
-            message.append("USDT \nBuy - ");
-            message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
-            message.append("\nSell - ");
-            message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
-            message.append("\n_________\n");
-            message.append("\nТЕСТЫ. НЕ ОБРАЩАЕМ ВНИМАНИЯ !!!!!\n ДЛЯ КОГО БЛЯДЬ НАПИСАНО");
+
+            QString message;
+            if(actual.spred() > 2.0){
+
+                message.append(snd->getCoinName());
+                message.append("\n");
+                message.append(actual.toUserNative());
+                message.append("_________\n");
+                message.append("USDT \nBuy - ");
+                message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
+                message.append("\nSell - ");
+                message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
+                message.append("\n_________\n");
+
+                snd->sendGet("api.telegram.org",
+                             config::tgBotToken() + "/sendMessage",
+                             "chat_id=" + config::tgChatId() + "&text=" + message);
+            }
 
 
-            snd->sendGet("api.telegram.org",
-                        config::tgBotToken() + "/sendMessage",
-                        "chat_id=" + config::tgChatId() + "&text=" + message);
+
         }
     }
 

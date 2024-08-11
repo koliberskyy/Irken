@@ -20,6 +20,8 @@
 #include <QString>
 #include <QByteArray>
 #include <iostream>
+#include <QFile>
+#include <mutex>
 
 #include <memory>
 
@@ -83,7 +85,12 @@ class CoinState : public AbstractRequests
     Q_OBJECT
 
 	const QString coinName;
-	State state; 	
+    State state;
+
+    std::shared_ptr<QString> authToken;
+    std::mutex tokenGenMutex;
+    std::shared_ptr<bool> tokenUpdated;
+
 	
 	void parce_tgOrders(QJsonObject &&orders)
 	{
@@ -139,13 +146,39 @@ class CoinState : public AbstractRequests
             state.bbUsdt = kline[4].toString().toDouble();
         }
 	}
-
-
-
 public:
-	CoinState(const QString &coin, std::shared_ptr<QNetworkAccessManager> manager = nullptr) : 
+
+    void getAuthToken()
+    {
+        tokenGenMutex.lock();
+
+        if(!(*tokenUpdated)){
+                if(system(". venv_dir/bin/activate && python3.12 main.py") == 0)
+                    *tokenUpdated = true;
+            }
+
+            QFile inputFile("authToken.irken");
+            if (inputFile.open(QIODevice::ReadOnly))
+            {
+                QTextStream in(&inputFile);
+                while (!in.atEnd())
+                {
+                    QString line = in.readLine();
+                    *authToken = line;
+                }
+                inputFile.close();
+            }
+        tokenGenMutex.unlock();
+
+    }
+
+
+
+    CoinState(const QString &coin, std::shared_ptr<QString> auth, std::shared_ptr<bool> tokenUpdTrg, std::shared_ptr<QNetworkAccessManager> manager = nullptr) :
 		AbstractRequests(manager),
-		coinName{coin}
+        coinName{coin},
+        authToken{auth},
+        tokenUpdated{tokenUpdTrg}
 	{
 	}
 
@@ -252,6 +285,12 @@ protected slots:
 		{
             if(path == "/p2p/public-api/v2/offer/depth-of-market")
 			{
+                tokenGenMutex.lock();
+                if(!(*tokenUpdated))
+                    *tokenUpdated = false;
+                tokenGenMutex.unlock();
+
+
                 parce_tgOrders(doc.object());
                 if(this->isUpdated())
                 {
@@ -283,6 +322,7 @@ protected slots:
             sendGet("api.telegram.org",
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=" + config::tgChatId() + "&text=" + message);
+            getAuthToken();
         }
 
 
@@ -307,11 +347,13 @@ protected slots:
         dataObj.insert("limit", limit);
 
 
-        QString authToken("Bearer " + config::tgAuthToken());
+        //QString authToken("Bearer " + config::tgAuthToken());
+        QString token("Bearer ");
+        token.append(*authToken);
 
         std::vector<std::pair<QByteArray, QByteArray>> headers;
 			headers.push_back(std::make_pair<QByteArray, QByteArray>("content-type", "application/json"));
-        headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", authToken.toUtf8()));
+        headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", token.toUtf8()));
 
 		sendPost(	"walletbot.me", 
                     "/p2p/public-api/v2/offer/depth-of-market",
