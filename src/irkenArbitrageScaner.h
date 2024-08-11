@@ -17,11 +17,13 @@ class IrkenArbitrageScaner : public QObject
 	std::shared_ptr<CoinState> usdtState;
 	std::vector<std::shared_ptr<CoinState>> states;
 	std::shared_ptr<QNetworkAccessManager> manager;
+    std::unique_ptr<QDateTime>       updateTime;
 
 public:
 	explicit IrkenArbitrageScaner(QObject *parent = nullptr):
 		QObject(parent),
-        manager{std::make_shared<QNetworkAccessManager>(nullptr)}
+        manager{std::make_shared<QNetworkAccessManager>(nullptr)},
+        updateTime(new QDateTime(QDateTime::currentDateTime()))
 	{
 
 
@@ -44,6 +46,11 @@ public:
 		}
 
         upd();
+
+        auto timer = new QTimer(this);
+        connect(timer, &QTimer::timeout, this, &IrkenArbitrageScaner::timerChanged);
+        timer->start(1000);
+
 	}
 
 public slots:
@@ -79,22 +86,38 @@ private slots:
 
             auto message = snd->getCoinName();
             message.append("\n");
+            Chain actual = *(chain.begin());
             for(const auto &it : chain)
             {
-                message.append(it.toUserNative());
-                message.append("_________\n");
+                if(it.spred() > actual.spred())
+                    actual = it;
             }
-            message.append("usdt \nBuy - ");
+            message.append(actual.toUserNative());
+            message.append("_________\n");
+            message.append("USDT \nBuy - ");
             message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
             message.append("\nSell - ");
             message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
             message.append("\n_________\n");
+            message.append("\nТЕСТЫ. НЕ ОБРАЩАЕМ ВНИМАНИЯ !!!!!\n ДЛЯ КОГО БЛЯДЬ НАПИСАНО");
+
 
             snd->sendGet("api.telegram.org",
                         config::tgBotToken() + "/sendMessage",
                         "chat_id=" + config::tgChatId() + "&text=" + message);
         }
-	}	
+    }
+
+    void timerChanged()
+    {
+        auto current = QDateTime::currentDateTime();
+
+        if(updateTime->secsTo(current) > 60){
+            upd();
+            updateTime->setDate(current.date());
+            updateTime->setTime(current.time());
+        }
+    }
 
 signals:
 	void updatingBegins();

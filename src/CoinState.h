@@ -11,6 +11,7 @@
 #include <QEventLoop>
 #include <QTimer>
 
+
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -51,10 +52,8 @@ namespace market
 
 		double spred() const
 		{
-			if(marketSell == market::tg)
-				return 0.991 * 100 * (priceSell - priceBuy) / priceBuy;
-
-			return 100 * (priceSell - priceBuy) / priceBuy;
+            auto reply = 100 * (priceSell - priceBuy) / priceBuy;
+            return reply - 0.9;
 		}
 		QString toUserNative() const
 		{
@@ -88,8 +87,8 @@ class CoinState : public AbstractRequests
 	
 	void parce_tgOrders(QJsonObject &&orders)
 	{
-		//set tgBuy || tgSell
-        if(orders["status"] == "SUCCESS"){
+        //set tgBuy || tgSell
+        if(orders["status"] == "SUCCESS" ){
             auto data = orders["data"].toArray();
             auto type = data.begin()->toObject()["type"].toString();
             double midPrice{0.0};
@@ -140,6 +139,7 @@ class CoinState : public AbstractRequests
             state.bbUsdt = kline[4].toString().toDouble();
         }
 	}
+
 
 
 public:
@@ -216,7 +216,7 @@ private:
 	void updateTgBuy()
     {
         if(coinName == "USDT"){
-            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "30");
+            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "20");
         }
         else{
             getAvaibleTgOrders("RUB", coinName, "PURCHASE", "10");
@@ -226,10 +226,10 @@ private:
 	void updateTgSell()
 	{
         if(coinName == "USDT"){
-            getAvaibleTgOrders("RUB", coinName, "SALE", "30");
+            getAvaibleTgOrders("RUB", coinName, "SALE", "20");
         }
         else{
-            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "10");
+            getAvaibleTgOrders("RUB", coinName, "SALE", "10");
         }
 	}
 
@@ -278,7 +278,11 @@ protected slots:
 		}
         else
         {
-            std::cout << "request error - code: " << error << "\n";
+            QString message("request error - code: ");
+            message.append(  QString::fromStdString(std::to_string(error)));
+            sendGet("api.telegram.org",
+                         config::tgBotToken() + "/sendMessage",
+                         "chat_id=" + config::tgChatId() + "&text=" + message);
         }
 
 
@@ -301,7 +305,6 @@ protected slots:
         dataObj.insert("quoteCurrencyCode", baseCoin);
         dataObj.insert("offerType", offerType);
         dataObj.insert("limit", limit);
-        dataObj.insert("desired_amount", "2");
 
 
         QString authToken("Bearer " + config::tgAuthToken());
