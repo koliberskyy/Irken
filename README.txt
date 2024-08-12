@@ -10,6 +10,7 @@
 	+ UI has removed
 	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
 	+ user friendly telegram alerts with spred chain information
+	+ telegram authentification token auto generation (python script is not include on repo)
 
 **************************CHANGE LOG*********************************
 # 10.03.2024 VERSION 6.4.0:
@@ -111,3 +112,6 @@
 	+ user friendly telegram alerts with spred chain information
 	+ all private information (etc. api tokens) placed in one file
 
+12.08.24 VERSION 6.13.1-cbt:
+	+ some fixes on reply message
+	+ telegram authentification token auto generation (python script is not include on repo)

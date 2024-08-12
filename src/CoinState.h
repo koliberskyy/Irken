@@ -68,13 +68,13 @@ namespace market
 			reply.append(marketBuy);
 			reply.append(".\nWith price - ");
 			reply.append(QString::fromStdString(std::to_string(priceBuy)));
-			reply.append("\n");
+			reply.append(" RUB\n");
 
 			reply.append("Sell on  ");
 			reply.append(marketSell);
 			reply.append(".\nWith price - ");
 			reply.append(QString::fromStdString((std::to_string(priceSell))));
-			reply.append("\n");
+			reply.append(" RUB\n");
 
 			return std::move(reply);
 		}
@@ -146,7 +146,17 @@ class CoinState : public AbstractRequests
             state.bbUsdt = kline[4].toString().toDouble();
         }
 	}
+
 public:
+
+    CoinState(const QString &coin, std::shared_ptr<QString> auth, std::shared_ptr<bool> tokenUpdTrg, std::shared_ptr<QNetworkAccessManager> manager = nullptr) :
+		AbstractRequests(manager),
+        coinName{coin},
+        authToken{auth},
+        tokenUpdated{tokenUpdTrg}
+	{
+	}
+
 
     void getAuthToken()
     {
@@ -172,15 +182,6 @@ public:
 
     }
 
-
-
-    CoinState(const QString &coin, std::shared_ptr<QString> auth, std::shared_ptr<bool> tokenUpdTrg, std::shared_ptr<QNetworkAccessManager> manager = nullptr) :
-		AbstractRequests(manager),
-        coinName{coin},
-        authToken{auth},
-        tokenUpdated{tokenUpdTrg}
-	{
-	}
 
 	void clear()
 	{
@@ -322,6 +323,7 @@ protected slots:
             sendGet("api.telegram.org",
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=" + config::tgChatId() + "&text=" + message);
+
             getAuthToken();
         }
 

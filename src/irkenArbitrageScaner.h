@@ -13,6 +13,10 @@ class IrkenArbitrageScaner : public QObject
 		"TON",
 		"BTC"
 	};
+
+	//map of comissions
+	std::unordered_map<QString, double> comission;
+
     inline static const QString coinBase {"USDT"};
 	std::shared_ptr<CoinState> usdtState;
 	std::vector<std::shared_ptr<CoinState>> states;
@@ -30,7 +34,9 @@ public:
         authToken{std::make_shared<QString>("")},
         tokenUpdated{std::make_shared<bool>(false)}
 	{
-
+		comissions["TON"] = 0.1;
+		comissions["NOT"] = 100.0;
+		comissions["BTC"] = 0.0001;
 
         usdtState = std::make_shared<CoinState>(coinBase, authToken, tokenUpdated, manager);
 		QObject::connect(this, &IrkenArbitrageScaner::updateUSDT,
@@ -57,6 +63,16 @@ public:
         connect(timer, &QTimer::timeout, this, &IrkenArbitrageScaner::timerChanged);
         timer->start(1000);
 
+	}
+
+	static QString getTransferComission(const QString &coin, double priceRUB)
+	{
+		auto usdt = comissions["coin"];
+		if(usdt <= 0)
+		{
+			return "0";
+		}
+		return QString::fromStdString(std::to_string(usdt * priceRUB)) + QString(" RUB");
 	}
 
 public slots:
@@ -105,10 +121,13 @@ private slots:
                 message.append(actual.toUserNative());
                 message.append("_________\n");
                 message.append("USDT \nBuy - ");
-                message.append(QString::fromStdString(std::to_string(usdtState->getState().tgBuy)));
-                message.append("\nSell - ");
-                message.append(QString::fromStdString(std::to_string(usdtState->getState().tgSell)));
-                message.append("\n_________\n");
+                message.append(QString::fromStdString(std::to_string(usdtState->getState().buy())));
+                message.append(" RUB\nSell - ");
+                message.append(QString::fromStdString(std::to_string(usdtState->getState().sell())));
+                message.append(" RUB\n_________\n");
+                message.append("Tranfer comission: ");
+				message.append(getTranferComission(snd->getCoinName(), actual.marketBuy));
+                message.append(" RUB\n_________\n");
 
                 snd->sendGet("api.telegram.org",
                              config::tgBotToken() + "/sendMessage",
