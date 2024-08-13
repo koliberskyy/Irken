@@ -14,9 +14,6 @@ class IrkenArbitrageScaner : public QObject
 		"BTC"
 	};
 
-	//map of comissions
-	std::unordered_map<QString, double> comission;
-
     inline static const QString coinBase {"USDT"};
 	std::shared_ptr<CoinState> usdtState;
 	std::vector<std::shared_ptr<CoinState>> states;
@@ -24,7 +21,6 @@ class IrkenArbitrageScaner : public QObject
     std::unique_ptr<QDateTime>       updateTime;
     std::shared_ptr<QString> authToken;
     std::shared_ptr<bool> tokenUpdated;
-
 
 public:
 	explicit IrkenArbitrageScaner(QObject *parent = nullptr):
@@ -34,9 +30,7 @@ public:
         authToken{std::make_shared<QString>("")},
         tokenUpdated{std::make_shared<bool>(false)}
 	{
-		comissions["TON"] = 0.1;
-		comissions["NOT"] = 100.0;
-		comissions["BTC"] = 0.0001;
+
 
         usdtState = std::make_shared<CoinState>(coinBase, authToken, tokenUpdated, manager);
 		QObject::connect(this, &IrkenArbitrageScaner::updateUSDT,
@@ -63,16 +57,6 @@ public:
         connect(timer, &QTimer::timeout, this, &IrkenArbitrageScaner::timerChanged);
         timer->start(1000);
 
-	}
-
-	static QString getTransferComission(const QString &coin, double priceRUB)
-	{
-		auto usdt = comissions["coin"];
-		if(usdt <= 0)
-		{
-			return "0";
-		}
-		return QString::fromStdString(std::to_string(usdt * priceRUB)) + QString(" RUB");
 	}
 
 public slots:
@@ -106,6 +90,7 @@ private slots:
         {
             auto chain = snd->getChain(usdtState->getState());
 
+            //found best chain
             Chain actual = *(chain.begin());
             for(const auto &it : chain)
             {
@@ -115,27 +100,11 @@ private slots:
 
             QString message;
             if(actual.spred() > 2.0){
-
-                message.append(snd->getCoinName());
-                message.append("\n");
-                message.append(actual.toUserNative());
-                message.append("_________\n");
-                message.append("USDT \nBuy - ");
-                message.append(QString::fromStdString(std::to_string(usdtState->getState().buy())));
-                message.append(" RUB\nSell - ");
-                message.append(QString::fromStdString(std::to_string(usdtState->getState().sell())));
-                message.append(" RUB\n_________\n");
-                message.append("Tranfer comission: ");
-				message.append(getTranferComission(snd->getCoinName(), actual.marketBuy));
-                message.append(" RUB\n_________\n");
-
+                message.append(actual.toUserNative(usdtState->getState()));
                 snd->sendGet("api.telegram.org",
                              config::tgBotToken() + "/sendMessage",
                              "chat_id=" + config::tgChatId() + "&text=" + message);
             }
-
-
-
         }
     }
 

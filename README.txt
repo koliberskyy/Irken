@@ -5,7 +5,7 @@
 Актуальная Desktop версия в ветке master
 ДЛЯ ЗАПУСКА ТРЕБУЕТСЯ ИНТЕРНЕТ
 
-10.08.24 VERSION 6.13.0-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
+10.08.24 VERSION 6.13.x-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
 	MAJOR PROJECT REBUILD 
 	+ UI has removed
 	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
@@ -115,3 +115,8 @@
 12.08.24 VERSION 6.13.1-cbt:
 	+ some fixes on reply message
 	+ telegram authentification token auto generation (python script is not include on repo)
+
+
+13.08.24 VERSION 6.13.2-cbt:
+        + Русский вывод в тг
+

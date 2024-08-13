@@ -28,6 +28,14 @@
 #include "abstractrequests.h"
 #include "config.h"
 
+//map of comissions
+inline const std::unordered_map<QString, double> comission
+{
+    {"TON", 0.1},
+    {"NOT", 100.0},
+    {"BTC", 0.00012}
+};
+
 namespace market
 {
 	inline const QString bb{"bybit"};
@@ -39,6 +47,7 @@ namespace market
 		double tgBuy{0.0};	// best buy price rub from tg
 		double tgSell{0.0}; // best sell price rub from tg
 		double bbUsdt{0.0};	// market COINUSDT pair price from bybit[another market]
+        QString coin;
 
         auto buy()const{if (tgBuy < tgSell) return tgBuy; else return tgSell;}
         auto sell()const{if (tgBuy > tgSell) return tgBuy; else return tgSell;}
@@ -52,15 +61,19 @@ namespace market
 		QString marketSell;
 		double priceSell;
 
+        QString coin;
+
 		double spred() const
 		{
             auto reply = 100 * (priceSell - priceBuy) / priceBuy;
             return reply - 0.9;
 		}
-		QString toUserNative() const
+        QString toUserNative(const State &usdtState) const
 		{
+#ifdef DEBUG_NULL
 			QString reply;
-            reply.append("SPRED: ");
+            reply.append(coin);
+            reply.append(" SPRED: ");
 			reply.append(QString::fromStdString(std::to_string(spred())));
 			reply.append(".\n");
 
@@ -77,7 +90,86 @@ namespace market
 			reply.append(" RUB\n");
 
 			return std::move(reply);
+#else
+            QString reply;
+
+            reply.append(coin);
+            reply.append(" Спред: ");
+            reply.append(QString::fromStdString(std::to_string(spred())));
+            reply.append(".\n\n");
+
+            if(marketBuy == market::bb)
+            {
+                reply.append("Купи USDT в tgWallet по цене:\n  ");
+                reply.append(QString::fromStdString(std::to_string(usdtState.buy())));
+                reply.append(" Rub\n");
+                reply.append("Перведи USDT на ");
+                reply.append(marketBuy);
+                reply.append("\nКупи ");
+                reply.append(coin);
+                reply.append("\nПереведи на ");
+                reply.append(marketSell);
+                reply.append("\nПродай c ценой не ниже чем:\n");
+                reply.append(QString::fromStdString(std::to_string(priceSell)));
+                reply.append(" Rub\n");
+                reply.append("Комиссия за перевод: \n");
+                reply.append(getTransferComission(coin, usdtState.buy()));
+                reply.append(" Rub\n");
+
+            }
+            if(marketSell == market::bb)
+            {
+                reply.append("\nКупи ");
+                reply.append(coin);
+                reply.append(" в tgWallet с ценой не выше чем:\n  ");
+                reply.append(QString::fromStdString(std::to_string(priceBuy)));
+                reply.append(" Rub\n");
+                reply.append("Перведи и продай ");
+                reply.append(coin);
+                reply.append(" на ");
+                reply.append(marketSell);
+                reply.append("\nПереведи USDT на ");
+                reply.append(marketBuy);
+                reply.append("\nПродай USDT по цене не ниже чем:\n");
+                reply.append(QString::fromStdString(std::to_string(usdtState.sell())));
+                reply.append(" Rub\n");
+                reply.append("Комиссия за перевод: \n");
+                reply.append(getTransferComission(coin, usdtState.buy()));
+                reply.append(" Rub\n");
+            }
+            if(marketSell == marketBuy)
+            {
+                reply.append("\nКупи ");
+                reply.append(coin);
+                reply.append(" в tgWallet с ценой не выше чем:\n  ");
+                reply.append(QString::fromStdString(std::to_string(priceBuy)));
+                reply.append(" Rub\n");
+                reply.append("Продай ");
+                reply.append(coin);
+                reply.append(" на ");
+                reply.append(marketSell);
+                reply.append("по цене c ценой не ниже чем:\n");
+                reply.append(QString::fromStdString(std::to_string(priceSell)));
+                reply.append(" Rub\n");
+            }
+
+            reply.append("_________\n");
+            return std::move(reply);
+#endif
+
 		}
+    private:
+
+        QString getTransferComission(const QString &coin, double priceRUB) const
+        {
+            auto usdt = comission.at(coin);
+            if(usdt <= 0)
+            {
+                return "0";
+            }
+            return QString::fromStdString(std::to_string(usdt * priceRUB)) + QString(" RUB");
+        }
+
 	};
 
 class CoinState : public AbstractRequests
@@ -91,7 +183,6 @@ class CoinState : public AbstractRequests
     std::mutex tokenGenMutex;
     std::shared_ptr<bool> tokenUpdated;
 
-	
 	void parce_tgOrders(QJsonObject &&orders)
 	{
         //set tgBuy || tgSell
@@ -135,7 +226,7 @@ class CoinState : public AbstractRequests
             }
         }
         else{
-
+            std::cout << coinName.toStdString() + " empty reply from tg...\n";
         }
 	}
 
@@ -147,16 +238,16 @@ class CoinState : public AbstractRequests
         }
 	}
 
-public:
 
+public:
     CoinState(const QString &coin, std::shared_ptr<QString> auth, std::shared_ptr<bool> tokenUpdTrg, std::shared_ptr<QNetworkAccessManager> manager = nullptr) :
 		AbstractRequests(manager),
         coinName{coin},
         authToken{auth},
         tokenUpdated{tokenUpdTrg}
 	{
+        state.coin = coin;
 	}
-
 
     void getAuthToken()
     {
@@ -181,7 +272,6 @@ public:
         tokenGenMutex.unlock();
 
     }
-
 
 	void clear()
 	{
@@ -211,29 +301,29 @@ public:
 		return coinName;
 	}
 
-	std::vector<Chain> getChain(const State &usdtState) const 
-	{
-		return generateChain(this->state, usdtState);
-	}
-
-	static std::vector<Chain> generateChain (const State &state, const State &usdtState = State())
+    std::vector<Chain> generateChain (const State &state, const State &usdtState = State()) const
 	{
 		std::vector<Chain> reply;
 
         reply.emplace_back(Chain{	market::tg, state.buy(),
-                                 market::tg, state.sell()});
+                                 market::tg, state.sell(), getCoinName()});
 
 		if(state.bbUsdt != 0.0)
 		{
             reply.emplace_back(Chain{	market::tg, state.buy(),
-                                     market::bb, state.bbUsdt * usdtState.sell()});
+                                     market::bb, state.bbUsdt * usdtState.sell(), getCoinName()} );
 
             reply.emplace_back(Chain{	market::bb, state.bbUsdt * usdtState.buy(),
-                                     market::tg, state.sell()});
+                                     market::tg, state.sell(), getCoinName()});
 		}
 
 		return std::move(reply);
 	}
+
+    std::vector<Chain> getChain(const State &usdtState) const
+    {
+        return generateChain(state, usdtState);
+    }
 
 public slots:
 	void upd()
@@ -318,11 +408,14 @@ protected slots:
 		}
         else
         {
+#ifdef DEBUG
+
             QString message("request error - code: ");
             message.append(  QString::fromStdString(std::to_string(error)));
             sendGet("api.telegram.org",
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=" + config::tgChatId() + "&text=" + message);
+#endif
 
             getAuthToken();
         }
