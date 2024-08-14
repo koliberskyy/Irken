@@ -99,7 +99,7 @@ private slots:
             }
 
             QString message;
-            if(actual.spred() > 2.0){
+            if(actual.spred() > 2.0 && actual.priceBuy > 0 && actual.priceSell > 0){
                 message.append(actual.toUserNative(usdtState->getState()));
                 snd->sendGet("api.telegram.org",
                              config::tgBotToken() + "/sendMessage",

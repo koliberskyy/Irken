@@ -96,11 +96,11 @@ namespace market
             reply.append(coin);
             reply.append(" Спред: ");
             reply.append(QString::fromStdString(std::to_string(spred())));
-            reply.append(".\n\n");
+            reply.append(".\n");
 
             if(marketBuy == market::bb)
             {
-                reply.append("Купи USDT в tgWallet по цене:\n  ");
+                reply.append("Купи USDT в tgWallet по цене:\n");
                 reply.append(QString::fromStdString(std::to_string(usdtState.buy())));
                 reply.append(" Rub\n");
                 reply.append("Перведи USDT на ");
@@ -113,7 +113,7 @@ namespace market
                 reply.append(QString::fromStdString(std::to_string(priceSell)));
                 reply.append(" Rub\n");
                 reply.append("Комиссия за перевод: \n");
-                reply.append(getTransferComission(coin, usdtState.buy()));
+                reply.append(getTransferComission(coin, priceBuy));
                 reply.append(" Rub\n");
 
             }
@@ -121,7 +121,7 @@ namespace market
             {
                 reply.append("\nКупи ");
                 reply.append(coin);
-                reply.append(" в tgWallet с ценой не выше чем:\n  ");
+                reply.append(" в tgWallet с ценой не выше чем:\n");
                 reply.append(QString::fromStdString(std::to_string(priceBuy)));
                 reply.append(" Rub\n");
                 reply.append("Перведи и продай ");
@@ -134,21 +134,21 @@ namespace market
                 reply.append(QString::fromStdString(std::to_string(usdtState.sell())));
                 reply.append(" Rub\n");
                 reply.append("Комиссия за перевод: \n");
-                reply.append(getTransferComission(coin, usdtState.buy()));
+                reply.append(getTransferComission(coin, priceBuy));
                 reply.append(" Rub\n");
             }
             if(marketSell == marketBuy)
             {
                 reply.append("\nКупи ");
                 reply.append(coin);
-                reply.append(" в tgWallet с ценой не выше чем:\n  ");
+                reply.append(" в tgWallet с ценой не выше чем:\n");
                 reply.append(QString::fromStdString(std::to_string(priceBuy)));
                 reply.append(" Rub\n");
                 reply.append("Продай ");
                 reply.append(coin);
                 reply.append(" на ");
                 reply.append(marketSell);
-                reply.append("по цене c ценой не ниже чем:\n");
+                reply.append(" c ценой не ниже чем:\n");
                 reply.append(QString::fromStdString(std::to_string(priceSell)));
                 reply.append(" Rub\n");
             }
@@ -167,7 +167,7 @@ namespace market
             {
                 return "0";
             }
-            return QString::fromStdString(std::to_string(usdt * priceRUB)) + QString(" RUB");
+            return QString::fromStdString(std::to_string(usdt * priceRUB));
         }
 
 	};
