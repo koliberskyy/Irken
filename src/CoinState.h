@@ -100,7 +100,7 @@ namespace market
 
             if(marketBuy == market::bb)
             {
-                reply.append("Купи USDT в tgWallet по цене:\n");
+                reply.append("Купи USDT в tgWallet по цене:\nr");
                 reply.append(QString::fromStdString(std::to_string(usdtState.buy())));
                 reply.append(" Rub\n");
                 reply.append("Перведи USDT на ");

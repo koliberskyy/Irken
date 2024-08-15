@@ -7,11 +7,10 @@ class IrkenArbitrageScaner : public QObject
 {
 	Q_OBJECT
 
-    inline static const std::array<QString, 3> coins
+    inline static const std::array<QString, 2> coins
 	{
 		"NOT",
-		"TON",
-		"BTC"
+        "TON"
 	};
 
     inline static const QString coinBase {"USDT"};
@@ -99,7 +98,7 @@ private slots:
             }
 
             QString message;
-            if(actual.spred() > 2.0 && actual.priceBuy > 0 && actual.priceSell > 0){
+            if(actual.spred() > 2.5 && actual.priceBuy > 0 && actual.priceSell > 0){
                 message.append(actual.toUserNative(usdtState->getState()));
                 snd->sendGet("api.telegram.org",
                              config::tgBotToken() + "/sendMessage",
