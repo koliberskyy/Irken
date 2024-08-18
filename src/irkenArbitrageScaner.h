@@ -91,19 +91,55 @@ private slots:
 
             //found best chain
             Chain actual = *(chain.begin());
+#ifndef DEBUG
             for(const auto &it : chain)
             {
                 if(it.spred() > actual.spred())
                     actual = it;
             }
+#endif
 
             QString message;
-            if(actual.spred() > 2.5 && actual.priceBuy > 0 && actual.priceSell > 0){
-                message.append(actual.toUserNative(usdtState->getState()));
-                snd->sendGet("api.telegram.org",
-                             config::tgBotToken() + "/sendMessage",
-                             "chat_id=" + config::tgChatId() + "&text=" + message);
+#ifndef DEBUG
+            if(actual.spred() > 2.3 && actual.priceBuy > 0 && actual.priceSell > 0)
+#endif
+
+#ifdef DEBUG
+            message.append("ТЕСТОВОЕ СООБЩЕНИЕ.\n НЕ ОБРАЩАЕМ ВНИМАНИЯ\n");
+            for(const auto &it : chain){
+                actual = it;
+
+                if(actual.spred() > 0)
+#endif
+                {
+#ifdef DEBUG
+                    if(actual.spred() <= 1)
+                        message.append("МЕГА ПОЕБЕНЬ\n");
+                    else if(actual.spred() <= 1.5)
+                        message.append("ХУЕВЫЙ СПРЕД\n");
+#endif
+                    if(actual.spred() >= 3 && actual.spred() < 5)
+                        message.append("ХОРОШИЙ СПРЕД\n");
+                    else if(actual.spred() >= 5 && actual.spred() < 10)
+                        message.append("АХУЕННЫЙ СПРЕД\n");
+                    else if(actual.spred() >= 10)
+                        message.append("ЕБАТЬ ШО ТВОРИЦА\n");
+
+                    message.append(actual.toUserNative(usdtState->getState()));
+#ifdef DEBUG
+                    message.append("ТЕСТОВОЕ СООБЩЕНИЕ.\n НЕ ОБРАЩАЕМ ВНИМАНИЯ\n");
+                }
+#endif
+                    snd->sendGet("api.telegram.org",
+                                 config::tgBotToken() + "/sendMessage",
+                                 "chat_id=" + config::tgChatId() + "&text=" + message);
+#ifndef DEBUG
+
+                }
+#endif
+#ifdef DEBUG
             }
+#endif
         }
     }
 

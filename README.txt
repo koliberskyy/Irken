@@ -5,7 +5,7 @@
 Актуальная Desktop версия в ветке master
 ДЛЯ ЗАПУСКА ТРЕБУЕТСЯ ИНТЕРНЕТ
 
-10.08.24 VERSION 6.13.x-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
+10.08.24 VERSION 7.0.x-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
 	MAJOR PROJECT REBUILD 
 	+ UI has removed
 	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
@@ -105,18 +105,25 @@
     + выпилен ВЕСЬ устаревший функционал
     + бетка telegramAlerts
 
-10.08.24 VERSION 6.13.0-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
+10.08.24 VERSION 7.0.0-cbt - developed on POCO M5 powered by Android (termux + ubuntu 22 CLI + vim):
 	MAJOR PROJECT REBUILD 
 	+ UI has removed
 	+ now irken can use orders from telegram wallet and analize markets statesments automaticly
 	+ user friendly telegram alerts with spred chain information
 	+ all private information (etc. api tokens) placed in one file
 
-12.08.24 VERSION 6.13.1-cbt:
+12.08.24 VERSION 7.0.1-cbt:
 	+ some fixes on reply message
 	+ telegram authentification token auto generation (python script is not include on repo)
 
 
-13.08.24 VERSION 6.13.2-cbt:
+13.08.24 VERSION 7.0.2-cbt:
         + Русский вывод в тг
+
+17.08.24 VERSION 7.1.0-obt:
+        + Вывод сетевых ошибок в отдельный канал
+        + Корректировка расчета цены покупки доллара при обратной схеме
+17.08.24 VERSION 7.1.0-obt:
+        + еще более юзер френдли вывод
+        + ахуенный дебаг режим
 
