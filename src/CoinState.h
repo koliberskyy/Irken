@@ -127,7 +127,7 @@ namespace market
                 reply.append(" RUB\n");
 
                 reply.append("И поторопись, эта связка зависит от скорости.\n\n");
-                reply.append("Выхлоп с 10к:\nот:\n");
+                reply.append("Прибыль с 10к:\nот:\n");
                 reply.append(getVihlop(10000, spred() - buySellRangePC));
                 reply.append(" RUB\n");
                 reply.append("до:\n");
@@ -161,7 +161,7 @@ namespace market
                 reply.append(QString::fromStdString(std::to_string(usdtState.sell())));
                 reply.append(" RUB (или дороже)\n\n");
 
-                reply.append("Выхлоп с 10к:\n");
+                reply.append("Прибыль с 10к:\n");
                 reply.append(getVihlop(10000, spred()));
                 reply.append(" RUB\n");
                 reply.append("-комиссия за перевод:\n");
@@ -183,7 +183,7 @@ namespace market
                 reply.append(" дороже:\n\t");
                 reply.append(QString::fromStdString(std::to_string(priceSell)));
                 reply.append(" RUB\n\n");
-                reply.append("Выхлоп с 10к:\n");
+                reply.append("Прибыль с 10к:\n");
                 reply.append(getVihlop(10000, spred()));
                 reply.append(" RUB\n");
             }
@@ -248,7 +248,7 @@ class CoinState : public AbstractRequests
                         break;
                     }
                 }
-                if(minLimitRub < 15'000 && maxLimitRub < 100'000 && paymentMethodGood)
+                if(minLimitRub < 25'000 && maxLimitRub < 200'000 && paymentMethodGood)
                 {
                     midPrice += price;
                     ordersCount++;
