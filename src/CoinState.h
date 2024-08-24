@@ -232,9 +232,11 @@ class CoinState : public AbstractRequests
             auto type = data.begin()->toObject()["type"].toString();
             double midPrice{0.0};
             int ordersCount{0};
-            for(const auto it : data)
+            auto it = data.cbegin();
+            it++;it++;
+            for(;it != data.cend(); it++)
             {
-                auto obj =  it.toObject();
+                auto obj =  it->toObject();
                 auto price = obj["price"].toObject()["value"].toString().toDouble();
                 auto minLimitRub = obj["orderVolumeLimits"].toObject()["min"].toString().toDouble() * price;
                 auto maxLimitRub = obj["orderVolumeLimits"].toObject()["max"].toString().toDouble() * price;
@@ -243,7 +245,7 @@ class CoinState : public AbstractRequests
                 for(const auto pay : paymentMethods){
                     auto payObj = pay.toObject();
                     auto code = payObj["code"];
-                    if(code == "payeer" || code == "yoomoney"){
+                    if(code == "payeer" || code == "yoomoney" || code == "webmoney"){
                         paymentMethodGood = false;
                         break;
                     }
