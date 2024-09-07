@@ -22,7 +22,8 @@
 
 class symbol {
 public:
-inline static const std::array<QByteArray, 57> utf8 = {
+inline static const std::array<QByteArray, 58> utf8 = {
+        "DOGSUSDT",
         "NOTUSDT",
         "TONUSDT",
         "BTCUSDT",
