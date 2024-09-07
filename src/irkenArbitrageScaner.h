@@ -7,10 +7,11 @@ class IrkenArbitrageScaner : public QObject
 {
 	Q_OBJECT
 
-    inline static const std::array<QString, 2> coins
+    inline static const std::array<QString, 3> coins
 	{
 		"NOT",
-        "TON"
+        "TON",
+        "DOGS"
 	};
 
     inline static const QString coinBase {"USDT"};
@@ -121,9 +122,9 @@ private slots:
                     if(actual.spred() >= 3 && actual.spred() < 5)
                         message.append("ХОРОШИЙ СПРЕД\n");
                     else if(actual.spred() >= 5 && actual.spred() < 10)
-                        message.append("АХУЕННЫЙ СПРЕД\n");
+                        message.append("ОТЛИЧНЫЙ СПРЕД\n");
                     else if(actual.spred() >= 10)
-                        message.append("ЕБАТЬ ШО ТВОРИЦА\n");
+                        message.append("НЕВЕРОЯТНЫЙ СПРЕД\n");
 
                     message.append(actual.toUserNative(usdtState->getState()));
 #ifdef DEBUG

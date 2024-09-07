@@ -33,7 +33,8 @@ inline const std::unordered_map<QString, double> comission
 {
     {"TON", 0.1},
     {"NOT", 100.0},
-    {"BTC", 0.00012}
+    {"BTC", 0.00012},
+    {"DOGS", 0.0}
 };
 
 namespace market
@@ -229,43 +230,45 @@ class CoinState : public AbstractRequests
         //set tgBuy || tgSell
         if(orders["status"] == "SUCCESS" ){
             auto data = orders["data"].toArray();
-            auto type = data.begin()->toObject()["type"].toString();
-            double midPrice{0.0};
-            int ordersCount{0};
-            auto it = data.cbegin();
-            it++;it++;
-            for(;it != data.cend(); it++)
-            {
-                auto obj =  it->toObject();
-                auto price = obj["price"].toObject()["value"].toString().toDouble();
-                auto minLimitRub = obj["orderVolumeLimits"].toObject()["min"].toString().toDouble() * price;
-                auto maxLimitRub = obj["orderVolumeLimits"].toObject()["max"].toString().toDouble() * price;
-                auto paymentMethods = obj["paymentMethods"].toArray();
-                auto paymentMethodGood{true};
-                for(const auto pay : paymentMethods){
-                    auto payObj = pay.toObject();
-                    auto code = payObj["code"];
-                    if(code == "payeer" || code == "yoomoney" || code == "webmoney"){
-                        paymentMethodGood = false;
-                        break;
+            if(data.size() > 3){
+                auto type = data.begin()->toObject()["type"].toString();
+                double midPrice{0.0};
+                int ordersCount{0};
+                auto it = data.cbegin();
+                it++;it++;
+                for(;it != data.cend(); it++)
+                {
+                    auto obj =  it->toObject();
+                    auto price = obj["price"].toObject()["value"].toString().toDouble();
+                    auto minLimitRub = obj["orderVolumeLimits"].toObject()["min"].toString().toDouble() * price;
+                    auto maxLimitRub = obj["orderVolumeLimits"].toObject()["max"].toString().toDouble() * price;
+                    auto paymentMethods = obj["paymentMethods"].toArray();
+                    auto paymentMethodGood{true};
+                    for(const auto pay : paymentMethods){
+                        auto payObj = pay.toObject();
+                        auto code = payObj["code"];
+                        if(code == "payeer" || code == "yoomoney" || code == "webmoney"){
+                            paymentMethodGood = false;
+                            break;
+                        }
+                    }
+                    if(minLimitRub < 25'000 && maxLimitRub < 200'000 && paymentMethodGood)
+                    {
+                        midPrice += price;
+                        ordersCount++;
                     }
                 }
-                if(minLimitRub < 25'000 && maxLimitRub < 200'000 && paymentMethodGood)
+
+                midPrice /= ordersCount;
+
+                if(type == "SALE")
                 {
-                    midPrice += price;
-                    ordersCount++;
+                    state.tgSell = midPrice;
                 }
-            }
-
-            midPrice /= ordersCount;
-
-            if(type == "SALE")
-            {
-                state.tgSell = midPrice;
-            }
-            else if(type == "PURCHASE")
-            {
-                state.tgBuy = midPrice;
+                else if(type == "PURCHASE")
+                {
+                    state.tgBuy = midPrice;
+                }
             }
         }
         else{
