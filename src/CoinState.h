@@ -34,7 +34,7 @@ inline const std::unordered_map<QString, double> comission
     {"TON", 0.1},
     {"NOT", 100.0},
     {"BTC", 0.00012},
-    {"DOGS", 0.0}
+    {"DOGS", 1600.0}
 };
 
 namespace market
@@ -279,8 +279,11 @@ class CoinState : public AbstractRequests
     void parce_bbKline(QJsonObject&& allKlines)
 	{
         auto kline = allKlines["result"].toObject()["list"].toArray().begin()->toArray();
+        //auto kline = allKlines["data"].toArray().begin()->toArray();
+
         if(!kline.isEmpty()){
             state.bbUsdt = kline[4].toString().toDouble();
+            //state.bbUsdt = kline[2].toString().toDouble();
         }
 	}
 
@@ -405,7 +408,9 @@ private:
 
 	void updateBB()
 	{
-		downloadKlines(coinName + "USDT", "5", "1");
+        downloadKlines(coinName + "USDT", "5", "1");
+        //downloadKlines(coinName + "-USDT", "5", "1");
+
 	}
 
 protected slots:
@@ -440,7 +445,8 @@ protected slots:
 			}
 
             else if(path == "/v5/market/kline")
-			{
+            //else if(path == "/api/v1/market/candles")
+            {
                 parce_bbKline(doc.object());
                 if(this->isUpdated())
                 {
@@ -457,8 +463,7 @@ protected slots:
 #ifdef DEBUG
 
             QString message("request error - code: ");
-            message.append(  QString::fromStdString(std::to_string(error)));
-            sendGet("api.telegram.org",
+            lsendGet("api.telegram.org",
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=-1001964821237&text=" + message);
 #endif
@@ -503,11 +508,16 @@ protected slots:
 
 	void downloadKlines(const QString &symbol, const QString &interval, const QString &limit)
 	{
-		QString query(	"category=spot&symbol=" + symbol+ 
-						"&interval=" + interval+ 
-						"&limit=" +limit);
+
+        QString query(	"category=spot&symbol=" + symbol+
+                        "&interval=" + interval+
+                        "&limit=" +limit);
 
         sendGet("api.bybit.com", "/v5/market/kline", std::move(query));
+        // QString query(	"category=spot&symbol=" + symbol+
+        //                 "&type=" +"5min");
+
+        //       sendGet("api.kucoin.com", "/api/v1/market/candles", std::move(query));
 	}
 signals:
 	void updatingComplete();
