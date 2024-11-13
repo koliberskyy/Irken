@@ -34,7 +34,9 @@ inline const std::unordered_map<QString, double> comission
     {"TON", 0.1},
     {"NOT", 100.0},
     {"BTC", 0.00012},
-    {"DOGS", 1600.0}
+    {"DOGS", 1600.0},
+    {"HMSTR", 0.0}
+
 };
 
 namespace market
@@ -488,7 +490,10 @@ protected slots:
         dataObj.insert("baseCurrencyCode", quoteCoin);
         dataObj.insert("quoteCurrencyCode", baseCoin);
         dataObj.insert("offerType", offerType);
-        dataObj.insert("limit", limit);
+        dataObj.insert("limit", limit.toInt());
+        dataObj.insert("offset", 0);
+        //dataObj.insert("desiredAmount", 0);
+
 
 
         //QString authToken("Bearer " + config::tgAuthToken());
@@ -496,10 +501,11 @@ protected slots:
         token.append(*authToken);
 
         std::vector<std::pair<QByteArray, QByteArray>> headers;
-			headers.push_back(std::make_pair<QByteArray, QByteArray>("content-type", "application/json"));
-        headers.push_back(std::make_pair<QByteArray, QByteArray>("authorization", token.toUtf8()));
+        headers.emplace_back(std::make_pair<QByteArray, QByteArray>("content-type", "application/json"));
+        headers.emplace_back(std::make_pair<QByteArray, QByteArray>("authorization", token.toUtf8()));
 
-		sendPost(	"walletbot.me", 
+        //'https://walletbot.me/p2p/public-api/v2/offer/depth-of-market'
+        sendPost(	"walletbot.me",
                     "/p2p/public-api/v2/offer/depth-of-market",
                     QJsonDocument(dataObj).toJson(QJsonDocument::Compact),
 					"https",

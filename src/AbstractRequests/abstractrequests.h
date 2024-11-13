@@ -59,7 +59,7 @@ public:
         url.setHost(std::forward<Host_str>(host));
         url.setPath(std::forward<Path_str>(path));
 
-        POST(QNetworkRequest(std::move(url)), std::move(data));
+        POST(QNetworkRequest(std::move(url)), std::forward<QByteArray>(data));
     }
 
     template<typename Host_str, typename Path_str>

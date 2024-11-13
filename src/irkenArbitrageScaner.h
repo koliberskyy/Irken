@@ -7,11 +7,12 @@ class IrkenArbitrageScaner : public QObject
 {
 	Q_OBJECT
 
-    inline static const std::array<QString, 3> coins
+    inline static const std::array<QString, 4> coins
 	{
 		"NOT",
         "TON",
-        "DOGS"
+        "DOGS",
+        "HMSTR"
 	};
 
     inline static const QString coinBase {"USDT"};
@@ -92,17 +93,20 @@ private slots:
 
             //found best chain
             Chain actual = *(chain.begin());
+            if(actual.marketBuy == actual.marketSell){
+                actual = *(++chain.begin());
+            }
 #ifndef DEBUG
             for(const auto &it : chain)
             {
-                if(it.spred() > actual.spred())
+                if(it.spred() > actual.spred() && it.marketBuy != it.marketSell)
                     actual = it;
             }
 #endif
 
             QString message;
 #ifndef DEBUG
-            if(actual.spred() > 2.3 && actual.priceBuy > 0 && actual.priceSell > 0)
+            if(actual.spred() > 2.3 && actual.priceBuy > 0 && actual.priceSell > 0 && actual.marketBuy != actual.marketSell)
 #endif
 
 #ifdef DEBUG
