@@ -469,6 +469,15 @@ protected slots:
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=-1001964821237&text=" + message);
 #endif
+            std::cout << "\n\n\n!!!!!REPLY ERROR!!!!!\n"
+                      << QDateTime::currentDateTime().toString("dd.MM.yyyy  hh.mm.ss").toStdString()
+                      << "\nmessage:\n"
+                      << reply.toStdString()
+                      << "\nerror code:"
+                      << error
+                      << "\nUrl:\n"
+                      << url.toString().toStdString()
+                      << "\n!!!!!END OF REPLY ERROR!!!!!\n\n\n";
 
             getAuthToken();
         }
