@@ -123,12 +123,6 @@ private slots:
                     else if(actual.spred() <= 1.5)
                         message.append("ХУЕВЫЙ СПРЕД\n");
 #endif
-                    if(actual.spred() >= 3 && actual.spred() < 5)
-                        message.append("ХОРОШИЙ СПРЕД\n");
-                    else if(actual.spred() >= 5 && actual.spred() < 10)
-                        message.append("ОТЛИЧНЫЙ СПРЕД\n");
-                    else if(actual.spred() >= 10)
-                        message.append("НЕВЕРОЯТНЫЙ СПРЕД\n");
 
                     message.append(actual.toUserNative(usdtState->getState()));
 #ifdef DEBUG

@@ -50,11 +50,16 @@ namespace market
 		double tgBuy{0.0};	// best buy price rub from tg
 		double tgSell{0.0}; // best sell price rub from tg
 		double bbUsdt{0.0};	// market COINUSDT pair price from bybit[another market]
+        double worstBuy{0.0};
+        double worstSell{0.0};
         QString coin;
 
         auto buy()const{if (tgBuy < tgSell) return tgBuy; else return tgSell;}
         auto sell()const{if (tgBuy > tgSell) return tgBuy; else return tgSell;}
         auto mid()const{return (buy() + sell())/2;}
+        auto getWorstBuy()const{if (worstBuy < worstSell) return worstBuy; else return worstSell;}
+        auto getWorstSell()const{if (worstBuy > worstSell) return worstBuy; else return worstSell;}
+
 
 	};
 
@@ -62,16 +67,28 @@ namespace market
 	{
 		QString marketBuy;
 		double priceBuy;
+        double worstBuy;
 		QString marketSell;
 		double priceSell;
+        double worstSell;
 
         QString coin;
 
-		double spred() const
+        double spred() const
 		{
             auto reply = 100 * (priceSell - priceBuy) / priceBuy;
             return reply - 0.9;
 		}
+        double worstSellSpred() const
+        {
+            auto reply = 100 * (worstSell - priceBuy) / priceBuy;
+            return reply - 0.9;
+        }
+        double worstBuySpred() const
+        {
+            auto reply = 100 * (priceSell - worstBuy) / worstBuy;
+            return reply - 0.9;
+        }
         QString toUserNative(const State &usdtState) const
 		{
 #ifdef DEBUG_NULL
@@ -97,72 +114,73 @@ namespace market
 #else
             QString reply;
             reply.append(coin);
+            reply.append("---\t");
 
+            if (marketBuy == marketSell)
+                return ("");
 
             if(marketBuy == market::bb)
             {
-                auto buySellRangePC = 100 * (usdtState.sell() - usdtState.buy()) / usdtState.buy();
+                //spred
+                auto spredStr = std::to_string(spred());
+                spredStr.resize(5);
+                reply.append(QString::fromStdString(std::move(spredStr)));
+                reply.append(" %\nПРОДАЖА --------\n");
 
-                reply.append(" Спред \nот: ");
-                reply.append(QString::fromStdString(std::to_string(spred() - buySellRangePC)));
-                reply.append(" %\n");
-                reply.append("до: ");
-                reply.append(QString::fromStdString(std::to_string(spred())));
-                reply.append(" %\n");
-
-                reply.append("1. Купи USDT в tgWallet\n(Как можно дешевле)\nот:\n\t");
-                reply.append(QString::fromStdString(std::to_string(usdtState.sell())));
+                //usdt buy
+                auto usdtStr = std::to_string(usdtState.buy());
+                usdtStr.resize(6);
+                reply.append("\n1. Купи USDT в tg:\n\t");
+                reply.append(QString::fromStdString(std::move(usdtStr)));
                 reply.append(" RUB\n");
-                reply.append("до:\n\t");
-                reply.append(QString::fromStdString(std::to_string(usdtState.buy())));
-                reply.append(" RUB\n");
-                reply.append("2. Перведи USDT на ");
-                reply.append(marketBuy);
-                reply.append("\n3. Купи ");
-                reply.append(coin);
-                reply.append(" на все USDT");
-                reply.append("\n4. Переведи ");
+                reply.append("2. Купи ");
                 reply.append(coin);
                 reply.append(" на ");
-                reply.append(marketSell);
-                reply.append("\n5. Продай за:\n\t");
-                reply.append(QString::fromStdString(std::to_string(priceSell)));
-                reply.append(" RUB\n");
+                reply.append(marketBuy);
 
-                reply.append("И поторопись, эта связка зависит от скорости.\n\n");
-                reply.append("Прибыль с 10к:\nот:\n");
-                reply.append(getVihlop(10000, spred() - buySellRangePC));
-                reply.append(" RUB\n");
-                reply.append("до:\n");
+                //coin sell
+                auto coinStr = std::to_string(priceSell);
+                reply.append("\n3. Продай в tg:\n\t");
+                reply.append(QString::fromStdString(std::move(coinStr)));
+                reply.append(" RUB\n\n");
+
+                reply.append("Прибыль с 10к:\n\t");
                 reply.append(getVihlop(10000, spred()));
                 reply.append(" RUB\n");
 
-                reply.append("-комиссия за перевод:\n");
+                reply.append("-комиссия за перевод:\n\t");
                 reply.append(getTransferComission(coin, priceBuy));
                 reply.append(" RUB\n");
+
+
             }
             else {
-                reply.append(" Спред: ");
-                reply.append(QString::fromStdString(std::to_string(spred())));
-                reply.append(" %\n");
+                //spred
+                auto spredStr = std::to_string(spred());
+                spredStr.resize(5);
+                reply.append(QString::fromStdString(std::move(spredStr)));
+                reply.append(" %\nПОКУПКА ++++++++++\n");
             }
 
             if(marketSell == market::bb)
             {
+                //coin sell
+                auto coinStr = std::to_string(priceBuy);
+                //usdt buy
+                auto usdtStr = std::to_string(usdtState.sell());
+                usdtStr.resize(6);
+
                 reply.append("\n1. Купи ");
                 reply.append(coin);
-                reply.append(" в tgWallet дешевле:\n\t");
-                reply.append(QString::fromStdString(std::to_string(priceBuy)));
+                reply.append(" в tg :\n\t");
+                reply.append(QString::fromStdString(std::move(coinStr)));
                 reply.append(" RUB\n");
                 reply.append("2. Перведи и продай ");
-                reply.append(coin);
                 reply.append(" на ");
                 reply.append(marketSell);
-                reply.append("\n3. Переведи USDT на ");
-                reply.append(marketBuy);
-                reply.append("\n4. Продай USDT по:\n\t");
-                reply.append(QString::fromStdString(std::to_string(usdtState.sell())));
-                reply.append(" RUB (или дороже)\n\n");
+                reply.append("\n3. Продай USDT:\n\t");
+                reply.append(QString::fromStdString(std::move(usdtStr)));
+                reply.append(" RUB \n\n");
 
                 reply.append("Прибыль с 10к:\n");
                 reply.append(getVihlop(10000, spred()));
@@ -171,27 +189,28 @@ namespace market
                 reply.append(getTransferComission(coin, priceBuy));
                 reply.append(" RUB\n");
 
-            }
-            if(marketSell == marketBuy)
-            {
-                reply.append("\n1. Купи ");
-                reply.append(coin);
-                reply.append(" в tgWallet дешевле:\n\t");
-                reply.append(QString::fromStdString(std::to_string(priceBuy)));
-                reply.append(" RUB\n");
-                reply.append("2. Продай ");
-                reply.append(coin);
-                reply.append(" на ");
-                reply.append(marketSell);
-                reply.append(" дороже:\n\t");
-                reply.append(QString::fromStdString(std::to_string(priceSell)));
-                reply.append(" RUB\n\n");
-                reply.append("Прибыль с 10к:\n");
-                reply.append(getVihlop(10000, spred()));
-                reply.append(" RUB\n");
+
             }
 
-            reply.append("_________\n");
+            reply.append("---------\n");
+
+            auto wspredStr = std::to_string(worstBuySpred());
+            wspredStr.resize(5);
+            reply.append("wBuyOrd - ");
+            reply.append(QString::fromStdString(std::to_string(worstBuy)));
+            reply.append(" - ");
+            reply.append(QString::fromStdString(wspredStr));
+            reply.append(" %\n");
+
+            wspredStr = std::to_string(worstSellSpred());
+            wspredStr.resize(5);
+            reply.append("wSellOrd - ");
+            reply.append(QString::fromStdString(std::to_string(worstSell)));
+            reply.append(" - ");
+            reply.append(QString::fromStdString(wspredStr));
+            reply.append(" %\n");
+
+            reply.append("---------\n");
 
             return std::move(reply);
 #endif
@@ -236,14 +255,39 @@ class CoinState : public AbstractRequests
                 auto type = data.begin()->toObject()["type"].toString();
                 double midPrice{0.0};
                 int ordersCount{0};
+
+                double qtyLimit;
+                if(coinName == "USDT")
+                    qtyLimit = 25'000.0;
+                else
+                    qtyLimit = 11125'000.0;
+
                 auto it = data.cbegin();
-                it++;it++;
+
+
+
+                if(coinName == "USDT"){
+                    it++;
+                    it++;
+                }
+                else{
+                    auto obj =  it->toObject();
+                    auto price = obj["price"].toObject()["value"].toString().toDouble();
+                    if(type == "SALE")
+                    {
+                        state.worstSell = price;
+                    }
+                    else if(type == "PURCHASE")
+                    {
+                        state.worstBuy = price;
+                    }
+                }
+
                 for(;it != data.cend(); it++)
                 {
                     auto obj =  it->toObject();
                     auto price = obj["price"].toObject()["value"].toString().toDouble();
                     auto minLimitRub = obj["orderVolumeLimits"].toObject()["min"].toString().toDouble() * price;
-                    auto maxLimitRub = obj["orderVolumeLimits"].toObject()["max"].toString().toDouble() * price;
                     auto paymentMethods = obj["paymentMethods"].toArray();
                     auto paymentMethodGood{true};
                     for(const auto pay : paymentMethods){
@@ -254,7 +298,7 @@ class CoinState : public AbstractRequests
                             break;
                         }
                     }
-                    if(minLimitRub < 25'000 && maxLimitRub < 200'000 && paymentMethodGood)
+                    if(minLimitRub < qtyLimit && paymentMethodGood)
                     {
                         midPrice += price;
                         ordersCount++;
@@ -356,16 +400,16 @@ public:
 	{
 		std::vector<Chain> reply;
 
-        reply.emplace_back(Chain{	market::tg, state.buy(),
-                                 market::tg, state.sell(), getCoinName()});
+        reply.emplace_back(Chain{	market::tg, state.buy(), state.getWorstBuy(),
+                                 market::tg, state.sell(), state.getWorstSell(), getCoinName()});
 
 		if(state.bbUsdt != 0.0)
 		{
-            reply.emplace_back(Chain{	market::tg, state.buy(),
-                                     market::bb, state.bbUsdt * usdtState.sell(), getCoinName()} );
+            reply.emplace_back(Chain{	market::tg, state.buy(), state.worstBuy,
+                                     market::bb, state.bbUsdt * usdtState.sell(), state.worstSell, getCoinName()} );
 
-            reply.emplace_back(Chain{	market::bb, state.bbUsdt * usdtState.buy(),
-                                     market::tg, state.sell(), getCoinName()});
+            reply.emplace_back(Chain{	market::bb, state.bbUsdt * usdtState.buy(), state.worstBuy,
+                                     market::tg, state.sell(), state.worstSell, getCoinName()});
 		}
 
 		return std::move(reply);
@@ -394,7 +438,7 @@ private:
             getAvaibleTgOrders("RUB", coinName, "PURCHASE", "20");
         }
         else{
-            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "10");
+            getAvaibleTgOrders("RUB", coinName, "PURCHASE", "7");
         }
 	}
 	
@@ -404,7 +448,7 @@ private:
             getAvaibleTgOrders("RUB", coinName, "SALE", "20");
         }
         else{
-            getAvaibleTgOrders("RUB", coinName, "SALE", "10");
+            getAvaibleTgOrders("RUB", coinName, "SALE", "7");
         }
 	}
 
@@ -423,6 +467,7 @@ protected slots:
 
         auto url = request.url();
         auto path = url.path();
+        auto query = url.query(QUrl::FullyEncoded);
         auto doc = QJsonDocument::fromJson(std::move(reply));
 
 		if(error == QNetworkReply::NoError)
@@ -469,7 +514,7 @@ protected slots:
                          config::tgBotToken() + "/sendMessage",
                          "chat_id=-1001964821237&text=" + message);
 #endif
-            std::cout << "\n\n\n!!!!!REPLY ERROR!!!!!\n"
+            std::cout << "\\n!!!!!REPLY ERROR!!!!!\n"
                       << QDateTime::currentDateTime().toString("dd.MM.yyyy  hh.mm.ss").toStdString()
                       << "\nmessage:\n"
                       << reply.toStdString()
@@ -477,7 +522,9 @@ protected slots:
                       << error
                       << "\nUrl:\n"
                       << url.toString().toStdString()
-                      << "\n!!!!!END OF REPLY ERROR!!!!!\n\n\n";
+                      << "\nQuery:\n"
+                      << query.toStdString()
+                      << "\n!!!!!END OF REPLY ERROR!!!!!\n";
 
             getAuthToken();
         }
